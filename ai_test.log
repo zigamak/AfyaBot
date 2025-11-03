@@ -1,0 +1,93 @@
+2025-10-16 14:25:52,034 - __main__ - INFO - ============================================================
+2025-10-16 14:25:52,034 - __main__ - INFO - Testing AI Service
+2025-10-16 14:25:52,034 - __main__ - INFO - ============================================================
+2025-10-16 14:25:52,034 - __main__ - INFO - Supabase URL: SET
+2025-10-16 14:25:52,034 - __main__ - INFO - Supabase Key: SET
+2025-10-16 14:25:52,034 - __main__ - INFO - OpenAI Key: SET
+2025-10-16 14:25:57,240 - services.ai_service - INFO - Configuration check - Supabase URL: set
+2025-10-16 14:25:57,240 - services.ai_service - INFO - Configuration check - Supabase Key: set
+2025-10-16 14:25:57,240 - services.ai_service - INFO - Configuration check - OpenAI API Key: set
+2025-10-16 14:25:57,240 - services.ai_service - INFO - AI Enabled: True
+2025-10-16 14:25:57,915 - services.ai_service - INFO - Supabase client initialized successfully
+2025-10-16 14:25:59,012 - services.ai_service - INFO - Vector store initialized successfully
+2025-10-16 14:25:59,991 - services.ai_service - INFO - RAG pipeline initialized successfully for Gynecology Medical AI.
+2025-10-16 14:25:59,991 - __main__ - INFO - ✓ AI Service initialized successfully
+2025-10-16 14:25:59,991 - __main__ - INFO - 
+============================================================
+2025-10-16 14:25:59,991 - __main__ - INFO - Testing Questions
+2025-10-16 14:25:59,991 - __main__ - INFO - ============================================================
+2025-10-16 14:25:59,991 - __main__ - INFO - 
+--- Test 1/5 ---
+2025-10-16 14:25:59,991 - __main__ - INFO - Question: What is cervical screening?
+2025-10-16 14:25:59,991 - services.ai_service - INFO - Generating medical response for: What is cervical screening?
+2025-10-16 14:26:01,645 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-16 14:26:01,794 - services.ai_service - INFO - Retrieving documents for query: cervical screening
+2025-10-16 14:26:02,852 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-10-16 14:26:06,099 - httpx - INFO - HTTP Request: POST https://syoesccpepohqjmkougg.supabase.co/rest/v1/rpc/match_documents?limit=3 "HTTP/2 200 OK"
+2025-10-16 14:26:06,099 - services.ai_service - INFO - Retrieved 3 documents
+2025-10-16 14:26:06,970 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-16 14:26:08,670 - services.ai_service - INFO - Generated response: Cervical screening is a test designed to detect early abnormal changes in the cervix, which can help
+2025-10-16 14:26:08,670 - __main__ - INFO - Response: Cervical screening is a test designed to detect early abnormal changes in the cervix, which can help prevent cervical cancer. The most common tests used are the Pap smear and the HPV test. Women aged 25 and older are encouraged to undergo cervical cytology, while those between 30 and 64 may have HPV testing as the primary screening method. It's important to discuss any preferences regarding the clinician performing the screening to ensure comfort and confidentiality. 🌸
+
+💙 For personalized advice, please consult a healthcare professional.
+2025-10-16 14:26:08,670 - __main__ - INFO - Needs Info: False
+2025-10-16 14:26:08,670 - __main__ - INFO - ✓ Test passed
+2025-10-16 14:26:08,670 - __main__ - INFO - 
+--- Test 2/5 ---
+2025-10-16 14:26:08,675 - __main__ - INFO - Question: How does cervical cancer screening work?
+2025-10-16 14:26:08,675 - services.ai_service - INFO - Generating medical response for: How does cervical cancer screening work?
+2025-10-16 14:26:09,713 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-16 14:26:09,896 - services.ai_service - INFO - Retrieving documents for query: cervical cancer screening
+2025-10-16 14:26:10,908 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-10-16 14:26:11,239 - httpx - INFO - HTTP Request: POST https://syoesccpepohqjmkougg.supabase.co/rest/v1/rpc/match_documents?limit=3 "HTTP/2 200 OK"
+2025-10-16 14:26:11,239 - services.ai_service - INFO - Retrieved 3 documents
+2025-10-16 14:26:12,147 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-16 14:26:14,313 - services.ai_service - INFO - Generated response: Cervical cancer screening primarily involves testing for the Human Papillomavirus (HPV), which is th
+2025-10-16 14:26:14,313 - __main__ - INFO - Response: Cervical cancer screening primarily involves testing for the Human Papillomavirus (HPV), which is the main cause of cervical cancer. Women in the target age group are screened, and if precancerous lesions are detected, they can be treated to prevent cancer development. In some cases, alternative methods like Visual Inspection with Acetic acid (VIA) or cytology may be used if HPV testing is not available. It's essential to have a follow-up plan in place for any suspected cases of cancer. 💙
+
+💙 For personalized advice, please consult a healthcare professional.
+2025-10-16 14:26:14,313 - __main__ - INFO - Needs Info: False
+2025-10-16 14:26:14,313 - __main__ - INFO - ✓ Test passed
+2025-10-16 14:26:14,313 - __main__ - INFO - 
+--- Test 3/5 ---
+2025-10-16 14:26:14,313 - __main__ - INFO - Question: Why should I get screened for cervical cancer?
+2025-10-16 14:26:14,313 - services.ai_service - INFO - Generating medical response for: Why should I get screened for cervical cancer?
+2025-10-16 14:26:15,734 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-16 14:26:16,054 - services.ai_service - INFO - Retrieving documents for query: cervical cancer screening importance
+2025-10-16 14:26:16,863 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-10-16 14:26:17,650 - httpx - INFO - HTTP Request: POST https://syoesccpepohqjmkougg.supabase.co/rest/v1/rpc/match_documents?limit=3 "HTTP/2 200 OK"
+2025-10-16 14:26:17,652 - services.ai_service - INFO - Retrieved 3 documents
+2025-10-16 14:26:18,347 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-16 14:26:20,111 - services.ai_service - INFO - Generated response: Getting screened for cervical cancer is crucial because it can help prevent the majority of cases by
+2025-10-16 14:26:20,111 - __main__ - INFO - Response: Getting screened for cervical cancer is crucial because it can help prevent the majority of cases by detecting precancerous lesions early. Regular screening allows for timely treatment, significantly reducing the risk of developing cervical cancer. The primary method recommended for screening is HPV testing, which is effective in identifying those at risk. Remember, early detection can save lives! 🌸
+
+💙 For personalized advice, please consult a healthcare professional.
+2025-10-16 14:26:20,136 - __main__ - INFO - Needs Info: False
+2025-10-16 14:26:20,140 - __main__ - INFO - ✓ Test passed
+2025-10-16 14:26:20,158 - __main__ - INFO - 
+--- Test 4/5 ---
+2025-10-16 14:26:20,158 - __main__ - INFO - Question: What are the benefits of cervical screening?
+2025-10-16 14:26:20,159 - services.ai_service - INFO - Generating medical response for: What are the benefits of cervical screening?
+2025-10-16 14:26:21,684 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-16 14:26:21,847 - services.ai_service - INFO - Retrieving documents for query: benefits of cervical screening
+2025-10-16 14:26:22,251 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-10-16 14:26:22,616 - httpx - INFO - HTTP Request: POST https://syoesccpepohqjmkougg.supabase.co/rest/v1/rpc/match_documents?limit=3 "HTTP/2 200 OK"
+2025-10-16 14:26:22,633 - services.ai_service - INFO - Retrieved 3 documents
+2025-10-16 14:26:23,184 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-16 14:26:24,247 - services.ai_service - INFO - Generated response: Cervical screening offers several important benefits, including the early detection of cervical canc
+2025-10-16 14:26:24,247 - __main__ - INFO - Response: Cervical screening offers several important benefits, including the early detection of cervical cancer and pre-cancerous changes, which can significantly reduce the risk of developing invasive cancer. It helps identify women who may need further testing or treatment, thereby improving health outcomes. Additionally, regular screening can lead to better management of cervical health and overall women's wellness. 🌸
+2025-10-16 14:26:24,247 - __main__ - INFO - Needs Info: False
+2025-10-16 14:26:24,247 - __main__ - INFO - ✓ Test passed
+2025-10-16 14:26:24,247 - __main__ - INFO - 
+--- Test 5/5 ---
+2025-10-16 14:26:24,247 - __main__ - INFO - Question: I want to order a screening kit
+2025-10-16 14:26:24,247 - services.ai_service - INFO - Prompting for missing kit request info: ['your area or county'] for phone_number=test123
+2025-10-16 14:26:24,247 - __main__ - INFO - Response: Thank you for your interest in a cervical screening kit! 🎉
+Please provide your area or county to complete your request.
+2025-10-16 14:26:24,247 - __main__ - INFO - Needs Info: True
+2025-10-16 14:26:24,247 - __main__ - INFO - Location: None, Name: Test User
+2025-10-16 14:26:24,247 - __main__ - INFO - ✓ Test passed
+2025-10-16 14:26:24,247 - __main__ - INFO - 
+============================================================
+2025-10-16 14:26:24,247 - __main__ - INFO - Testing Complete
+2025-10-16 14:26:24,247 - __main__ - INFO - ============================================================
