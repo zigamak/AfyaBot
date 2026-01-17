@@ -7023,3 +7023,39 @@ NameError: name 'datetime' is not defined. Did you forget to import 'datetime'
 2026-01-17 16:26:26,244 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
  * Running on http://127.0.0.1:8000
 2026-01-17 16:26:26,244 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2026-01-18 00:32:48,517 - __main__ - ERROR - Environment check failed. Please fix the issues above.
+2026-01-18 00:32:53,695 - __main__ - INFO - Starting Wallpaper.ng AI Assistant server...
+2026-01-18 00:32:54,697 - __main__ - ERROR - Import error: cannot import name 'DataManager' from 'utils.data_manager' (C:\Users\zigam\Documents\Coding\Pentanative\BEDC\utils\data_manager.py)
+2026-01-18 00:35:09,865 - __main__ - INFO - Starting Wallpaper.ng AI Assistant server...
+2026-01-18 00:35:12,258 - utils.session_manager - INFO - SessionManager initialized. Default timeouts: Unpaid=3000s, Paid=12000s
+2026-01-18 00:35:12,258 - app - ERROR - Error initializing core services: DATABASE_URL not found in config or environment variables
+Traceback (most recent call last):
+  File "C:\Users\zigam\Documents\Coding\Pentanative\BEDC\app.py", line 38, in <module>
+    data_manager = DataManager(config)
+                   ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zigam\Documents\Coding\Pentanative\BEDC\utils\data_manager.py", line 32, in __init__
+    raise ValueError("DATABASE_URL not found in config or environment variables")
+ValueError: DATABASE_URL not found in config or environment variables
+2026-01-18 00:37:37,029 - __main__ - INFO - Starting Wallpaper.ng AI Assistant server...
+2026-01-18 00:37:38,959 - utils.session_manager - INFO - SessionManager initialized. Default timeouts: Unpaid=3000s, Paid=12000s
+2026-01-18 00:37:38,959 - utils.data_manager - INFO - Using DB_URL from config.DB_URL
+2026-01-18 00:37:41,784 - utils.data_manager - INFO - Database connection pool initialized successfully
+2026-01-18 00:37:42,164 - utils.data_manager - INFO - Database connection test successful
+2026-01-18 00:37:42,354 - services.whatsapp_service - DEBUG - WhatsAppService initialized with phone_number_id: 846412388549528
+2026-01-18 00:37:42,354 - app - INFO - Core services initialized for AfyaBot (Gynecology Medical AI)
+2026-01-18 00:37:42,885 - services.ai_service - INFO - AI Service initialized with LLM support
+2026-01-18 00:37:42,885 - handlers.ai_handler - INFO - AIHandler: LLM-powered AI Service initialized
+2026-01-18 00:37:43,333 - services.ai_service - INFO - AI Service initialized with LLM support
+2026-01-18 00:37:43,333 - handlers.ai_handler - INFO - AIHandler: LLM-powered AI Service initialized
+2026-01-18 00:37:43,333 - message_processor - INFO - MessageProcessor initialized for Gynecology Medical AI (AfyaBot).
+2026-01-18 00:37:43,334 - app - INFO - AfyaBot handlers and message processor initialized.
+2026-01-18 00:37:43,334 - utils.session_manager - INFO - SessionManager initialized. Default timeouts: Unpaid=3000s, Paid=12000s
+2026-01-18 00:37:43,334 - utils.data_manager - INFO - Using DB_URL from config.DB_URL
+2026-01-18 00:37:44,483 - utils.data_manager - INFO - Database connection pool initialized successfully
+2026-01-18 00:37:44,863 - utils.data_manager - INFO - Database connection test successful
+2026-01-18 00:37:45,053 - services.whatsapp_service - DEBUG - WhatsAppService initialized with phone_number_id: 846412388549528
+2026-01-18 00:37:45,053 - services.payment_service - INFO - PaymentService initialized
+2026-01-18 00:37:45,053 - app - INFO - WebhookHandler initialized with message processor.
+2026-01-18 00:37:45,075 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8000
+2026-01-18 00:37:45,075 - werkzeug - INFO - [33mPress CTRL+C to quit[0m

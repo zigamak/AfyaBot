@@ -19,17 +19,34 @@ class DBManager:
         Args:
             config: Configuration object or dictionary with database credentials
         """
-        # Get database connection string
-        try:
-            if isinstance(config, dict):
-                self.db_url = config.get("database_url") or os.getenv("DATABASE_URL")
-            else:
-                self.db_url = getattr(config, 'DATABASE_URL', os.getenv("DATABASE_URL"))
-        except:
-            self.db_url = os.getenv("DATABASE_URL")
+        # Get database connection string - try multiple sources
+        self.db_url = None
+        
+        # Try config object attributes (try both DB_URL and DATABASE_URL)
+        if config:
+            if hasattr(config, 'DB_URL') and config.DB_URL:
+                self.db_url = config.DB_URL
+                logger.info("Using DB_URL from config.DB_URL")
+            elif hasattr(config, 'DATABASE_URL') and config.DATABASE_URL:
+                self.db_url = config.DATABASE_URL
+                logger.info("Using DATABASE_URL from config.DATABASE_URL")
+        
+        # Try config dict
+        if not self.db_url and config and isinstance(config, dict):
+            self.db_url = config.get("DB_URL") or config.get("DATABASE_URL") or config.get("database_url")
+            if self.db_url:
+                logger.info("Using database URL from config dict")
+        
+        # Try environment variables
+        if not self.db_url:
+            self.db_url = os.getenv("DB_URL") or os.getenv("DATABASE_URL")
+            if self.db_url:
+                logger.info("Using database URL from environment variable")
         
         if not self.db_url:
-            raise ValueError("DATABASE_URL not found in config or environment variables")
+            logger.error("Database URL not found in config or environment")
+            logger.error("Tried: config.DB_URL, config.DATABASE_URL, os.getenv('DB_URL'), os.getenv('DATABASE_URL')")
+            raise ValueError("Database URL not found. Please add DB_URL or DATABASE_URL to your config.py or .env file")
         
         # Initialize connection pool
         try:
@@ -316,49 +333,6 @@ class DBManager:
             logger.error(f"Error saving fault report: {e}")
             return False
 
-    def get_fault_reports_by_account(self, account_number: str, limit: int = 10) -> List[Dict[str, Any]]:
-        """
-        Get fault reports for a specific account.
-
-        Args:
-            account_number (str): Customer's account number
-            limit (int): Maximum number of reports to return
-
-        Returns:
-            List[Dict[str, Any]]: List of fault reports
-        """
-        try:
-            with self.get_connection() as conn:
-                with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("""
-                        SELECT 
-                            id,
-                            reference_number,
-                            phone_number,
-                            account_number,
-                            email,
-                            fault_description,
-                            fault_type,
-                            status,
-                            priority,
-                            assigned_to,
-                            resolution_notes,
-                            resolved_at,
-                            created_at,
-                            updated_at
-                        FROM fault_reports
-                        WHERE account_number = %s
-                        ORDER BY created_at DESC
-                        LIMIT %s
-                    """, (account_number, limit))
-                    
-                    results = cur.fetchall()
-                    return [dict(row) for row in results]
-                    
-        except Exception as e:
-            logger.error(f"Error retrieving fault reports: {e}")
-            return []
-
     def save_map_application(self, phone_number: str, account_number: str, 
                            customer_name: str, email: str = None) -> bool:
         """
@@ -496,126 +470,6 @@ class DBManager:
             logger.error(f"Error getting analytics: {e}")
             return {}
 
-    def save_faq_interaction(self, session_id: str, phone_number: str, 
-                            question: str, answer: str, category: str = None) -> bool:
-        """
-        Save FAQ interaction for analytics.
-
-        Args:
-            session_id (str): Session identifier
-            phone_number (str): User's phone number
-            question (str): User's question
-            answer (str): FAQ answer provided
-            category (str): FAQ category (optional)
-
-        Returns:
-            bool: True if saved successfully
-        """
-        try:
-            with self.get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        INSERT INTO faq_interactions 
-                        (session_id, phone_number, question, answer, category, created_at)
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                    """, (
-                        session_id,
-                        phone_number,
-                        question,
-                        answer,
-                        category,
-                        datetime.now()
-                    ))
-                    
-            logger.info(f"Saved FAQ interaction for {phone_number}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error saving FAQ interaction: {e}")
-            return False
-
-    def update_customer_info(self, account_number: str, **kwargs) -> bool:
-        """
-        Update customer information.
-
-        Args:
-            account_number (str): Customer's account number
-            **kwargs: Fields to update (email, phone_number, address, etc.)
-
-        Returns:
-            bool: True if updated successfully
-        """
-        try:
-            # Build dynamic UPDATE query
-            update_fields = []
-            values = []
-            
-            allowed_fields = ['email', 'phone_number', 'address', 'customer_name', 
-                            'bill_amount', 'nerc_cap', 'is_metered', 'meter_number']
-            
-            for field, value in kwargs.items():
-                if field in allowed_fields:
-                    update_fields.append(f"{field} = %s")
-                    values.append(value)
-            
-            if not update_fields:
-                logger.warning("No valid fields to update")
-                return False
-            
-            # Add account_number to values
-            values.append(account_number)
-            
-            query = f"""
-                UPDATE customers 
-                SET {', '.join(update_fields)}, updated_at = %s
-                WHERE account_number = %s
-            """
-            values.insert(-1, datetime.now())
-            
-            with self.get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(query, values)
-                    
-            logger.info(f"Updated customer info for account {account_number}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error updating customer info: {e}")
-            return False
-
-    def get_pending_fault_reports(self, limit: int = 50) -> List[Dict[str, Any]]:
-        """
-        Get pending fault reports for admin dashboard.
-
-        Args:
-            limit (int): Maximum number of reports to return
-
-        Returns:
-            List[Dict[str, Any]]: List of pending fault reports
-        """
-        try:
-            with self.get_connection() as conn:
-                with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("""
-                        SELECT 
-                            fr.*,
-                            c.customer_name,
-                            c.feeder,
-                            c.address
-                        FROM fault_reports fr
-                        LEFT JOIN customers c ON fr.account_number = c.account_number
-                        WHERE fr.status = 'pending'
-                        ORDER BY fr.created_at DESC
-                        LIMIT %s
-                    """, (limit,))
-                    
-                    results = cur.fetchall()
-                    return [dict(row) for row in results]
-                    
-        except Exception as e:
-            logger.error(f"Error retrieving pending fault reports: {e}")
-            return []
-
     def close(self):
         """Close all database connections."""
         try:
@@ -624,3 +478,7 @@ class DBManager:
                 logger.info("Database connections closed")
         except Exception as e:
             logger.error(f"Error closing database connections: {e}")
+
+
+# Keep the old DataManager name for backward compatibility
+DataManager = DBManager
