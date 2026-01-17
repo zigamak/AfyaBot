@@ -25,6 +25,20 @@ class GreetingHandler(BaseHandler):
     def _redirect_to_ai_chat(self, state: Dict, session_id: str, user_message: str = "") -> Dict[str, Any]:
         """Redirect user to LLM-powered AI chat with proper state management."""
         
+        # Check if user wants FAQ
+        if user_message and user_message.lower() in ['faq', 'faqs', 'questions', 'help']:
+            state["current_state"] = "faq"
+            state["current_handler"] = "faq_handler"
+            state["conversation_history"] = []
+            
+            self.session_manager.update_session_state(session_id, state)
+            
+            return {
+                "redirect": "faq_handler",
+                "redirect_message": "show_categories",
+                "additional_message": None
+            }
+        
         # Set up state for AI chat
         state["current_state"] = "ai_chat"
         state["current_handler"] = "ai_handler"

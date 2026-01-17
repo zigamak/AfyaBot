@@ -64,7 +64,7 @@ class AIService:
    Bills above the NERC cap are billing errors. We apologize for this. Your account will be reviewed and adjusted within one billing cycle.
 
 3. **How do I apply for a prepaid meter?**
-   Visit https://bedc.com/order-meter and follow the MAP (Meter Asset Provider) enrollment process. You'll need your account number.
+   Visit https://imaap.beninelectric.com:55682/ and follow the MAP (Meter Asset Provider) enrollment process. You'll need your account number.
 
 4. **What is MAP?**
    MAP stands for Meter Asset Provider - a scheme where you purchase your prepaid meter directly from approved vendors.
@@ -88,7 +88,7 @@ class AIService:
     Monday-Friday, 8:00 AM - 4:00 PM at Ring Road, Benin City.
 
 11. **How much does a prepaid meter cost?**
-    Meter costs vary by type (single-phase vs three-phase). Visit https://bedc.com/order-meter for current pricing.
+    Meter costs vary by type (single-phase vs three-phase). Visit https://imaap.beninelectric.com:55682/ for current pricing.
 
 12. **Can I pay my bill through WhatsApp?**
     Currently, bill payments are not available via WhatsApp. Please visit our office or use bank channels.
@@ -261,7 +261,7 @@ Generate a response that follows the system rules and return JSON only."""
         if any(word in message_lower for word in ['meter', 'prepaid', 'map', 'apply']):
             return {
                 "intent": "Metering",
-                "reply": "To apply for a prepaid meter through MAP: Visit https://bedc.com/order-meter, provide your account number, complete payment, and installation will be scheduled within 2-4 weeks. Do you have an existing BEDC account?",
+                "reply": "To apply for a prepaid meter through MAP: Visit https://imaap.beninelectric.com:55682/, provide your account number, complete payment, and installation will be scheduled within 2-4 weeks. Do you have an existing BEDC account?",
                 "required_data": []
             }
         
@@ -307,9 +307,17 @@ Generate a response that follows the system rules and return JSON only."""
         if session_state is None:
             session_state = {}
         
-        # Extract account number and email if present
+        # Check if account number already exists in session
+        saved_account_number = session_state.get("account_number")
+        
+        # Extract account number and email if present in current message
         account_number = self.extract_account_number(user_message)
         email = self.extract_email(user_message)
+        
+        # Use saved account number if no new one found
+        if not account_number and saved_account_number:
+            account_number = saved_account_number
+            logger.info(f"Using saved account number: {account_number}")
         
         # Prepare conversation state for LLM
         conversation_state = {
@@ -317,7 +325,8 @@ Generate a response that follows the system rules and return JSON only."""
             "user_name": user_name,
             "has_account_number": bool(account_number),
             "has_email": bool(email),
-            "session_data": session_state
+            "session_data": session_state,
+            "saved_account_number": saved_account_number
         }
         
         # Get customer data if account number is available
@@ -344,6 +353,11 @@ Generate a response that follows the system rules and return JSON only."""
         
         # Handle specific flows based on intent
         state_update = {}
+        
+        # Save account number to session if found
+        if account_number:
+            state_update["account_number"] = account_number
+            logger.info(f"Saving account number {account_number} to session")
         
         if intent == "Fault":
             # Handle fault reporting flow
