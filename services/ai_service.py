@@ -57,6 +57,10 @@ class AIService:
         """Load FAQ knowledge base for the LLM."""
         return """FAQ KNOWLEDGE BASE:
 
+IMPORTANT TERMINOLOGY:
+- **Unmetered customers**: Customers WITHOUT a prepaid or digital meter. They receive estimated monthly bills based on NERC caps.
+- **Prepaid meter**: A meter you purchase that allows you to pay for electricity in advance (buy units as needed).
+
 1. **What is NERC capping?**
    NERC (Nigerian Electricity Regulatory Commission) capping is the maximum amount an unmetered customer can be charged monthly based on their feeder classification.
 
@@ -120,46 +124,53 @@ class AIService:
 
     def _get_system_prompt(self) -> str:
         """Get the system prompt for the LLM."""
-        return f"""You are an AI customer support assistant for Benin Electricity Distribution Company (BEDC).
+        return f"""You are a helpful customer support representative for Benin Electricity Distribution Company (BEDC). You communicate naturally like a real person, not a bot.
 
 CRITICAL RULES:
-1. BE CONCISE but APPROPRIATE - Match tone to situation
+1. BE NATURAL - Sound like a real BEDC customer service rep, not a bot
 2. CHECK CONTEXT - If user already provided information, DON'T ask again
 3. ONE QUESTION AT A TIME - If you need info, ask for ONE thing only
 4. NO REPETITION - Don't repeat what you already said
+5. FAULT CONFIRMATION - Before logging a fault, ALWAYS confirm customer details
 
 TONE GUIDELINES:
 - **Apologize & Empathize** when: Billing errors, power outages, service failures
 - **Be Direct & Helpful** when: Providing information, answering questions, giving instructions
 - **Be Warm** for: Greetings, confirmations, simple requests
-- **Be Polite** when asking: Use "Please provide..." not "What's your..."
+- **Be Polite** when asking: Use "Could you share..." not "What's your..."
 - **Be Detailed** when explaining: Billing status, why something is correct/incorrect
 - **Be Concise** for: Simple how-to questions, straightforward requests
 
 RESPONSE FORMAT (JSON only):
 {{
-  "intent": "<Greeting | Billing | Metering | Fault | FAQ>",
-  "reply": "<Appropriate tone, concise response>",
+  "intent": "<Greeting | Billing | Metering | Fault | FaultConfirmation | FAQ>",
+  "reply": "<Natural, conversational response>",
   "required_data": ["<what's still missing>"]
 }}
 
 INTENT HANDLING:
 
 **Greeting**: 
-- Warm and brief: "Hello! How can I help you today?"
+- Warm and natural: "Hi! I'm here to help with your BEDC account. What can I assist you with today?"
 
 **Billing**: 
-- If no account → "Please provide your account number so I can review your billing."
-- If bill ABOVE CAP → "I apologize for this error. Your bill of ₦X,XXX exceeds the ₦Y,YYY NERC cap by ₦Z,ZZZ. We'll adjust it within one billing cycle."
-- If bill WITHIN CAP → "Your bill of ₦X,XXX is within the ₦Y,YYY NERC cap for [Feeder Name] feeder. Your billing follows the approved methodology for unmetered customers. For more accurate billing, consider applying for a prepaid meter at https://imaap.beninelectric.com:55682/"
+- If no account → "Could you share your account number so I can look into your billing?"
+- If bill ABOVE CAP → "I sincerely apologize for this error. Your bill of ₦X,XXX exceeds the ₦Y,YYY NERC cap by ₦Z,ZZZ. We'll adjust it within one billing cycle."
+- If bill WITHIN CAP → "Your bill of ₦X,XXX is within the ₦Y,YYY NERC cap for [Feeder Name] feeder. Since you're an unmetered customer (no prepaid meter), your billing follows the approved methodology. For more accurate billing, you can apply for a prepaid meter at https://imaap.beninelectric.com:55682/"
 
 **Fault**:
 - ALWAYS apologize for power outages
-- "I sincerely apologize for the power outage. Please provide your account number." (if needed)
-- If have all info → "Fault report logged (Ref: FR-XXXXX). Our team will contact you within 24-48 hours. Thank you for your patience."
+- "I'm sorry about the outage. Let me help you log a fault report. Could you share your account number?" (if needed)
+- Once you have account + email → Use "FaultConfirmation" intent to confirm before logging
+
+**FaultConfirmation**:
+- Before logging, confirm: "Just to confirm - is this your account?\n\nAccount: 123456\nEmail: user@email.com\n\nReply 'Yes' to confirm or 'No' to update."
+- After "Yes" confirmation → Log the fault with success message
+- After "No" → Ask what needs updating
 
 **Metering**:
 - Be helpful and direct: "You can apply for a prepaid meter at https://imaap.beninelectric.com:55682/"
+- If they ask what unmetered means → "Being unmetered means you don't have a prepaid meter yet. You receive estimated monthly bills based on NERC caps. Getting a prepaid meter lets you pay for only what you use."
 - If they need steps → Give 2-3 simple steps
 - If new customer → "You'll need to visit our office at Ring Road, Benin City to create an account first."
 
@@ -172,31 +183,35 @@ FAQ KNOWLEDGE:
 
 EXAMPLES:
 
-✅ GOOD - Billing Within Cap (Detailed):
-"Your bill of ₦14,500 is within the ₦15,000 NERC cap for Uselu feeder. Your billing follows the approved methodology for unmetered customers. For more accurate billing, consider applying for a prepaid meter."
+✅ GOOD - Greeting (Natural):
+"Hi! I'm here to help with your BEDC account. What can I assist you with today?"
 
-✅ GOOD - Billing Error (Empathetic & Clear):
-"I sincerely apologize. Your bill of ₦22,000 exceeds the ₦18,000 cap by ₦4,000. We'll adjust it within one billing cycle."
+✅ GOOD - Billing Within Cap (Detailed with clarification):
+"Your bill of ₦14,500 is within the ₦15,000 NERC cap for Uselu feeder. Since you're an unmetered customer (no prepaid meter), your billing follows the approved methodology. For more accurate billing, consider applying for a prepaid meter at https://imaap.beninelectric.com:55682/"
 
-✅ GOOD - Asking for Info (Polite):
-"Please provide your account number so I can review your billing."
+✅ GOOD - Fault Confirmation:
+"Just to confirm - is this your account?
 
-✅ GOOD - Simple Question (Direct):
-"You can apply at https://imaap.beninelectric.com:55682/"
+Account: 102345
+Email: john@email.com
 
-✅ GOOD - Fault Report (Empathetic):
-"I apologize for the power outage. What's your account number?"
+Reply 'Yes' to confirm or 'No' to update."
 
-✅ GOOD - Greeting (Warm):
-"Hello! How can I help you today?"
+✅ GOOD - After Confirmation:
+"Fault report logged successfully!
 
-❌ BAD - Over-apologizing:
-"I understand your concern and sincerely apologize for the inconvenience. I'm terribly sorry about this situation..."
+Reference: FR-102345-20260117
+Email: john@email.com
 
-❌ BAD - Too cold for serious issue:
-"Bill exceeds cap. Will fix."
+Our technical team will contact you within 24-48 hours. Thanks for your patience."
 
-BALANCE: Be human and caring when users have problems. Be efficient and helpful when they need information."""
+❌ BAD - Robotic greeting:
+"Hello! I'm BEDC Support Bot. How can I help you?"
+
+❌ BAD - Skipping confirmation:
+*Logs fault immediately without asking for confirmation*
+
+BALANCE: Be human, caring, and natural. Avoid sounding like a bot."""
 
     def call_llm(self, user_message: str, conversation_state: Dict = None,
                  customer_data: Dict = None, billing_result: Dict = None,
@@ -234,6 +249,8 @@ BALANCE: Be human and caring when users have problems. Be efficient and helpful 
                     state_info += f"- Email: Already provided\n"
                 if conversation_state.get("phone_number"):
                     state_info += f"- Phone: {conversation_state['phone_number']}\n"
+                if conversation_state.get("pending_fault_confirmation"):
+                    state_info += f"- PENDING FAULT CONFIRMATION: Waiting for user to confirm details\n"
                 context_parts.append(state_info)
             
             if customer_data:
@@ -249,7 +266,7 @@ BALANCE: Be human and caring when users have problems. Be efficient and helpful 
 
 {context}
 
-Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
+Remember: Be NATURAL (not robotic). Check context before asking for info. For faults, ALWAYS confirm details before logging. Return JSON only."""
             
             # Call OpenAI API
             response = self.client.chat.completions.create(
@@ -284,11 +301,11 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
         """Fallback pattern-matching based response when LLM is unavailable."""
         message_lower = user_message.lower().strip()
         
-        # Greeting - warm and welcoming
+        # Greeting - warm and natural
         if any(word in message_lower for word in ['hello', 'hi', 'hey', 'good morning', 'good afternoon']):
             return {
                 "intent": "Greeting",
-                "reply": "Hello! How can I help you today?",
+                "reply": "Hi! I'm here to help with your BEDC account. What can I assist you with today?",
                 "required_data": []
             }
         
@@ -300,7 +317,7 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
                 
                 if billing_result['status'] == 'within_cap':
                     reply = f"Your bill of ₦{billing_result['bill_amount']:,} is within the ₦{billing_result['nerc_cap']:,} NERC cap for {feeder} feeder. "
-                    reply += "Your billing follows the approved methodology for unmetered customers. "
+                    reply += "Since you're an unmetered customer (no prepaid meter), your billing follows the approved methodology. "
                     reply += "For more accurate billing, consider applying for a prepaid meter at https://imaap.beninelectric.com:55682/"
                 else:
                     # Apologize for billing errors with details
@@ -310,12 +327,12 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
             else:
                 return {
                     "intent": "Billing",
-                    "reply": "Please provide your account number so I can review your billing.",
+                    "reply": "Could you share your account number so I can look into your billing?",
                     "required_data": ["account_number"]
                 }
         
         # Metering - direct and helpful
-        if any(word in message_lower for word in ['meter', 'prepaid', 'map', 'apply']):
+        if any(word in message_lower for word in ['meter', 'prepaid', 'map', 'apply', 'unmetered']):
             return {
                 "intent": "Metering",
                 "reply": "You can apply for a prepaid meter at https://imaap.beninelectric.com:55682/",
@@ -326,14 +343,14 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
         if any(word in message_lower for word in ['fault', 'outage', 'no power', 'blackout', 'no light']):
             return {
                 "intent": "Fault",
-                "reply": "I sincerely apologize for the power outage. Please provide your account number.",
+                "reply": "I'm sorry about the outage. Let me help you log a fault report. Could you share your account number?",
                 "required_data": ["account_number", "email"]
             }
         
         # Default - helpful
         return {
             "intent": "FAQ",
-            "reply": "I can help with billing, meters, or fault reports. What do you need?",
+            "reply": "I can help with billing, meters, or fault reports. What do you need assistance with?",
             "required_data": []
         }
 
@@ -365,6 +382,45 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
         
         if session_state is None:
             session_state = {}
+        
+        # Check if we're waiting for fault confirmation
+        pending_confirmation = session_state.get("pending_fault_confirmation", False)
+        
+        # Handle confirmation responses
+        if pending_confirmation:
+            confirmation_lower = user_message.lower().strip()
+            if confirmation_lower in ['yes', 'y', 'confirm', 'correct', 'ok', 'okay']:
+                # Proceed with logging the fault
+                fault_data = session_state.get("fault_data", {})
+                
+                success = self.data_manager.save_fault_report(
+                    fault_data["phone_number"],
+                    fault_data["account_number"],
+                    fault_data["email"],
+                    fault_data.get("fault_description", "Power outage reported")
+                )
+                
+                if success:
+                    reply = "Fault report logged successfully!\n\n"
+                    reply += f"Reference: FR-{fault_data['account_number']}-{datetime.now().strftime('%Y%m%d')}\n"
+                    reply += f"Email: {fault_data['email']}\n\n"
+                    reply += "Our technical team will contact you within 24-48 hours. Thanks for your patience."
+                    
+                    return (reply, "Fault", {
+                        "fault_data": {},
+                        "pending_fault_confirmation": False
+                    })
+                else:
+                    return ("I apologize, but there was an error logging your fault report. Please try again.", "Fault", {
+                        "pending_fault_confirmation": False
+                    })
+            
+            elif confirmation_lower in ['no', 'n', 'wrong', 'incorrect', 'update']:
+                reply = "No problem. What would you like to update? Please provide the correct account number or email."
+                return (reply, "Fault", {
+                    "pending_fault_confirmation": False,
+                    "fault_data": {}
+                })
         
         # Check if account number already exists in session
         saved_account_number = session_state.get("account_number")
@@ -403,7 +459,8 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
             "has_email": bool(email),
             "email_from_database": bool(customer_email),
             "session_data": session_state,
-            "saved_account_number": saved_account_number
+            "saved_account_number": saved_account_number,
+            "pending_fault_confirmation": pending_confirmation
         }
         
         if account_number:
@@ -415,11 +472,11 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
             conversation_state,
             customer_data,
             billing_result,
-            conversation_history  # PASS CONVERSATION HISTORY
+            conversation_history
         )
         
         intent = llm_response.get("intent", "unknown")
-        reply = llm_response.get("reply", "I'm here to help. Please tell me more about your concern.")
+        reply = llm_response.get("reply", "I'm here to help. What can I assist you with?")
         required_data = llm_response.get("required_data", [])
         
         # Handle specific flows based on intent
@@ -445,22 +502,16 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
             
             # Check if we have all required data
             if fault_data.get("account_number") and fault_data.get("email") and fault_data.get("phone_number"):
-                # Save fault report
-                success = self.data_manager.save_fault_report(
-                    fault_data["phone_number"],
-                    fault_data["account_number"],
-                    fault_data["email"],
-                    fault_data.get("fault_description", "Power outage reported")
-                )
+                # Ask for confirmation before logging
+                confirmation_message = f"Just to confirm - is this your account?\n\n"
+                confirmation_message += f"Account: {fault_data['account_number']}\n"
+                confirmation_message += f"Email: {fault_data['email']}\n\n"
+                confirmation_message += "Reply 'Yes' to confirm or 'No' to update."
                 
-                if success:
-                    reply = "Fault report logged successfully.\n\n"
-                    reply += f"Reference: FR-{fault_data['account_number']}-{datetime.now().strftime('%Y%m%d')}\n"
-                    reply += f"Email: {fault_data['email']}\n\n"
-                    reply += "Our technical team will contact you within 24-48 hours. Thank you for your patience."
-                    state_update["fault_data"] = {}
-                else:
-                    reply = "I apologize, but there was an error logging your fault report. Please try again or contact our office."
+                state_update["fault_data"] = fault_data
+                state_update["pending_fault_confirmation"] = True
+                
+                return (confirmation_message, "FaultConfirmation", state_update)
             else:
                 state_update["fault_data"] = fault_data
         

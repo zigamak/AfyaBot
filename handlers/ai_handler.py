@@ -40,7 +40,7 @@ class AIHandler(BaseHandler):
             return self._handle_ai_chat_start(state, session_id, original_message)
 
     def _handle_ai_chat_start(self, state: Dict, session_id: str, user_message: str = None) -> Dict:
-        """Handle AI chat start with LLM support."""
+        """Handle AI chat start with LLM support - natural greeting."""
         
         # Set up chat state
         state["current_state"] = "ai_chat"
@@ -63,16 +63,14 @@ class AIHandler(BaseHandler):
             logger.info(f"Processing user message on chat start: {user_message[:50]}")
             return self._process_user_message(state, session_id, user_message)
         
-        # Otherwise send greeting
-        greeting_message = f"""Hi {user_name}! I'm BEDC Support Bot. 🌟
+        # Send natural greeting (not robotic)
+        greeting_message = f"""Hi {user_name}! I'm here to help with your BEDC account. What can I assist you with today?
 
-I help with:
-📋 Billing issues
-⚡ Meter applications  
+I can help with:
+📋 Billing inquiries
+⚡ Prepaid meter applications (for unmetered customers)
 🔧 Fault reports
-❓ FAQs (type 'FAQ')
-
-How can I help?"""
+❓ General questions"""
         
         return self.whatsapp_service.create_text_message(session_id, greeting_message)
 
@@ -91,7 +89,8 @@ How can I help?"""
             session_state = {
                 "fault_data": state.get("fault_data", {}),
                 "account_number": state.get("account_number"),
-                "billing_checked": state.get("billing_checked", False)
+                "billing_checked": state.get("billing_checked", False),
+                "pending_fault_confirmation": state.get("pending_fault_confirmation", False)
             }
             
             logger.info(f"Calling AI service with LLM for: {user_message[:100]}")
