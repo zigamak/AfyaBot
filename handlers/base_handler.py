@@ -4,7 +4,7 @@ from typing import Dict, List, Any
 logger = logging.getLogger(__name__)
 
 class BaseHandler:
-    """Base class for all message handlers in Wallpaper.ng system."""
+    """Base class for all message handlers in BEDC WhatsApp Bot."""
 
     def __init__(self, config, session_manager, data_manager, whatsapp_service):
         self.config = config
@@ -15,7 +15,7 @@ class BaseHandler:
 
     def handle_back_to_main(self, state: Dict, session_id: str, message: str = "") -> Dict:
         """
-        Handle returning to AI chat (main interaction mode for Wallpaper.ng).
+        Handle returning to main conversation mode.
         Clears temporary state and redirects to conversational AI.
         """
         # Clear any temporary state but preserve user info
@@ -23,14 +23,14 @@ class BaseHandler:
         state["current_handler"] = "ai_handler"
         
         # Preserve essential user data
-        user_name = state.get("user_name", "Guest")
+        user_name = state.get("user_name", "Customer")
         phone_number = state.get("phone_number", session_id)
         
         # Clear temporary conversation state
-        if "consultation_history" in state:
-            del state["consultation_history"]
-        if "quote_request" in state:
-            del state["quote_request"]
+        if "fault_data" in state:
+            del state["fault_data"]
+        if "billing_inquiry" in state:
+            del state["billing_inquiry"]
             
         # Reset conversation history for fresh start if needed
         state["conversation_history"] = []
@@ -44,5 +44,5 @@ class BaseHandler:
         return {
             "redirect": "ai_handler", 
             "redirect_message": "initial_greeting",
-            "additional_message": message if message else "How can I help you with your wallpaper needs today?"
+            "additional_message": message if message else "How can I help you with your BEDC services today?"
         }

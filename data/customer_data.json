@@ -1,0 +1,194 @@
+{
+  "customers": [
+    {
+      "account_number": "100001",
+      "customer_name": "Adebayo Tunde",
+      "feeder": "Uselu",
+      "bill_amount": 14500,
+      "nerc_cap": 15000,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100002",
+      "customer_name": "Osagie Blessing",
+      "feeder": "Ugbowo",
+      "bill_amount": 18200,
+      "nerc_cap": 15000,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100003",
+      "customer_name": "Ibrahim Musa",
+      "feeder": "Aduwawa",
+      "bill_amount": 12000,
+      "nerc_cap": 13500,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100004",
+      "customer_name": "Efe Johnson",
+      "feeder": "Sapele Road",
+      "bill_amount": 20500,
+      "nerc_cap": 17000,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100005",
+      "customer_name": "Okafor Chinedu",
+      "feeder": "Uselu",
+      "bill_amount": 15000,
+      "nerc_cap": 15000,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100006",
+      "customer_name": "Lawal Sadiq",
+      "feeder": "Ikpoba Hill",
+      "bill_amount": 9800,
+      "nerc_cap": 12000,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100007",
+      "customer_name": "Akinwale Funke",
+      "feeder": "GRA",
+      "bill_amount": 22000,
+      "nerc_cap": 18000,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100008",
+      "customer_name": "Obasuyi Kelvin",
+      "feeder": "Ring Road",
+      "bill_amount": 13200,
+      "nerc_cap": 14000,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100009",
+      "customer_name": "Mohammed Zainab",
+      "feeder": "Aduwawa",
+      "bill_amount": 16500,
+      "nerc_cap": 13500,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100010",
+      "customer_name": "Ojo Samuel",
+      "feeder": "Ugbowo",
+      "bill_amount": 14900,
+      "nerc_cap": 15000,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100011",
+      "customer_name": "Ighodaro Peace",
+      "feeder": "Uselu",
+      "bill_amount": 19000,
+      "nerc_cap": 15000,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100012",
+      "customer_name": "Bello Rukayat",
+      "feeder": "Ikpoba Hill",
+      "bill_amount": 11500,
+      "nerc_cap": 12000,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100013",
+      "customer_name": "Omoregie Patrick",
+      "feeder": "GRA",
+      "bill_amount": 17500,
+      "nerc_cap": 18000,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100014",
+      "customer_name": "Adebola Kemi",
+      "feeder": "Ring Road",
+      "bill_amount": 14000,
+      "nerc_cap": 14000,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100015",
+      "customer_name": "Danjuma Peter",
+      "feeder": "Sapele Road",
+      "bill_amount": 21000,
+      "nerc_cap": 17000,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100016",
+      "customer_name": "Afolayan Segun",
+      "feeder": "Ugbowo",
+      "bill_amount": 15800,
+      "nerc_cap": 15000,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100017",
+      "customer_name": "Ibitoye Tolu",
+      "feeder": "Uselu",
+      "bill_amount": 10200,
+      "nerc_cap": 15000,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100018",
+      "customer_name": "Okoro Ifunanya",
+      "feeder": "Aduwawa",
+      "bill_amount": 14300,
+      "nerc_cap": 13500,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100019",
+      "customer_name": "Ekhator Mary",
+      "feeder": "Ikpoba Hill",
+      "bill_amount": 12000,
+      "nerc_cap": 12000,
+      "meter_status": "Unmetered"
+    },
+    {
+      "account_number": "100020",
+      "customer_name": "Salami Ridwan",
+      "feeder": "GRA",
+      "bill_amount": 23500,
+      "nerc_cap": 18000,
+      "meter_status": "Unmetered"
+    }
+  ],
+  "feeders": {
+    "Uselu": {
+      "nerc_cap": 15000,
+      "area": "Benin City North"
+    },
+    "Ugbowo": {
+      "nerc_cap": 15000,
+      "area": "Benin City North"
+    },
+    "Aduwawa": {
+      "nerc_cap": 13500,
+      "area": "Benin City Central"
+    },
+    "Sapele Road": {
+      "nerc_cap": 17000,
+      "area": "Benin City South"
+    },
+    "Ikpoba Hill": {
+      "nerc_cap": 12000,
+      "area": "Benin City East"
+    },
+    "GRA": {
+      "nerc_cap": 18000,
+      "area": "Benin City Central"
+    },
+    "Ring Road": {
+      "nerc_cap": 14000,
+      "area": "Benin City West"
+    }
+  }
+}

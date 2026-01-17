@@ -1,401 +1,405 @@
 import logging
 import os
 import re
-from typing import Dict, List, Any
-from dataclasses import dataclass
+from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
-from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.agents import create_tool_calling_agent, AgentExecutor
-from langchain_community.vectorstores import SupabaseVectorStore
-from supabase.client import Client, create_client
-from langchain_core.tools import tool
 
 logger = logging.getLogger(__name__)
 
 class AIService:
     """
-    Handles AI-powered conversational interactions for a gynecology medical chatbot,
-    focusing on cervical screening, reproductive health, and community health worker integration.
+    Handles AI-powered conversational interactions for BEDC WhatsApp Support Bot,
+    focusing on billing complaints, metering inquiries, and fault reporting.
     """
 
     def __init__(self, config, data_manager):
-        load_dotenv()
+        """Initialize AI Service with configuration and data manager."""
         self.data_manager = data_manager
-
-        # Initialize configuration
+        self.ai_enabled = True  # Always enabled for rule-based responses
+        
+        # Get OpenAI API key if available (for future LLM integration)
         try:
             if isinstance(config, dict):
-                self.supabase_url = config.get("supabase_url")
-                self.supabase_key = config.get("supabase_service_key")
                 self.openai_api_key = config.get("openai_api_key")
             else:
-                self.supabase_url = getattr(config, 'SUPABASE_URL', None)
-                self.supabase_key = getattr(config, 'SUPABASE_SERVICE_KEY', None)
-                self.openai_api_key = getattr(config, 'OPENAI_API_KEY', None)
-
-            # Validate configuration
-            self.ai_enabled = bool(self.supabase_url and self.supabase_key and self.openai_api_key)
-            logger.info(f"Configuration check - Supabase URL: {'set' if self.supabase_url else 'missing'}")
-            logger.info(f"Configuration check - Supabase Key: {'set' if self.supabase_key else 'missing'}")
-            logger.info(f"Configuration check - OpenAI API Key: {'set' if self.openai_api_key else 'missing'}")
-            logger.info(f"AI Enabled: {self.ai_enabled}")
-
-            # Initialize Supabase client and RAG pipeline
-            self.supabase_client = None
-            self.vector_store = None
-            self.agent_executor = None
-            self.llm = None
-            
-            if self.ai_enabled:
-                # Initialize Supabase client
-                try:
-                    self.supabase_client = create_client(self.supabase_url, self.supabase_key)
-                    logger.info("Supabase client initialized successfully")
-                except Exception as e:
-                    logger.error(f"Failed to initialize Supabase client: {e}", exc_info=True)
-                    self.ai_enabled = False
-                    return
-
-                # Initialize embeddings and vector store
-                try:
-                    embeddings = OpenAIEmbeddings(model="text-embedding-3-small", api_key=self.openai_api_key)
-                    self.vector_store = SupabaseVectorStore(
-                        embedding=embeddings,
-                        client=self.supabase_client,
-                        table_name="gynecology_documents",
-                        query_name="match_documents",
-                    )
-                    logger.info("Vector store initialized successfully")
-                except Exception as e:
-                    logger.error(f"Failed to initialize vector store: {e}", exc_info=True)
-                    self.ai_enabled = False
-                    return
-
-                # Initialize LLM and agent
-                try:
-                    self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3, api_key=self.openai_api_key)
-                    
-                    tools = [self._create_retrieval_tool()]
-                    
-                    prompt = ChatPromptTemplate.from_messages([
-                        ("system", self._get_system_prompt()),
-                        MessagesPlaceholder(variable_name="chat_history", optional=True),
-                        ("human", "{input}"),
-                        MessagesPlaceholder(variable_name="agent_scratchpad"),
-                    ])
-
-                    agent = create_tool_calling_agent(self.llm, tools, prompt)
-                    self.agent_executor = AgentExecutor(
-                        agent=agent, 
-                        tools=tools, 
-                        verbose=True,
-                        handle_parsing_errors=True,
-                        max_iterations=3
-                    )
-                    logger.info("RAG pipeline initialized successfully for Gynecology Medical AI.")
-                except Exception as e:
-                    logger.error(f"Failed to initialize LLM or agent: {e}", exc_info=True)
-                    self.ai_enabled = False
-                    return
-            else:
-                logger.warning("AI features disabled - missing Supabase or OpenAI configuration.")
-        except Exception as e:
-            logger.error(f"Unexpected error during AIService initialization: {e}", exc_info=True)
-            self.ai_enabled = False
-
-    def _create_retrieval_tool(self):
-        """Create the retrieval tool with proper access to vector store."""
-        vector_store = self.vector_store
+                self.openai_api_key = getattr(config, 'OPENAI_API_KEY', os.getenv("OPENAI_API_KEY"))
+        except:
+            self.openai_api_key = None
         
-        @tool(response_format="content_and_artifact")
-        def retrieve(query: str):
-            """Retrieve medical information related to gynecology and cervical screening from the knowledge base."""
-            try:
-                logger.info(f"Retrieving documents for query: {query}")
-                # Use similarity_search with explicit limit parameter
-                retrieved_docs = vector_store.similarity_search(query, k=3)
-                
-                if not retrieved_docs:
-                    logger.warning(f"No documents retrieved for query: {query}")
-                    return "No relevant information found in the knowledge base.", []
-                
-                logger.info(f"Retrieved {len(retrieved_docs)} documents")
-                serialized = "\n\n".join(
-                    (f"Source: {doc.metadata}\nContent: {doc.page_content}")
-                    for doc in retrieved_docs
-                )
-                return serialized, retrieved_docs
-            except Exception as e:
-                logger.error(f"Error in retrieval tool: {e}", exc_info=True)
-                return f"Error retrieving information: {str(e)}", []
+        logger.info("AI Service initialized successfully for BEDC Support Bot")
+
+    def detect_intent(self, message: str) -> str:
+        """
+        Detect user intent from message.
+
+        Args:
+            message (str): User's message
+
+        Returns:
+            str: Detected intent (greeting, billing, metering, fault, faq, unknown)
+        """
+        if not message or not isinstance(message, str):
+            return "unknown"
         
-        return retrieve
-
-    def _get_system_prompt(self) -> str:
-        """Returns the system prompt for the Gynecology Medical AI."""
-        return """You are AfyaBot, a helpful and empathetic medical assistant specializing in gynecology and women's reproductive health.
-
-Your Role:
-- Answer questions about cervical screening, reproductive health, and women's wellness
-- Provide accurate information based on the retrieved medical documents
-- Be warm, supportive, and use simple, clear language
-- Encourage users to seek professional medical care when appropriate
-
-Guidelines:
-1. ALWAYS use the retrieve tool to search for relevant information before answering
-2. Base your answers ONLY on the retrieved medical documents
-3. If information isn't found in the documents, say: "I don't have specific information about that in my knowledge base. Please consult a qualified healthcare professional."
-4. Keep answers concise but informative (2-4 sentences for most questions)
-5. Use emojis sparingly (🌸, 💙, ✅) to make responses friendly
-6. Never diagnose conditions or prescribe treatments
-7. For urgent concerns, always recommend contacting a healthcare provider immediately
-8. If the user asks about kit requests or test results, acknowledge their request but remind them to follow the proper channels
-
-Important:
-- You MUST call the retrieve tool for medical questions
-- Never make up medical information
-- Be culturally sensitive and respectful
-- Maintain patient confidentiality
-
-Remember: You're here to inform and support, not to replace professional medical care."""
-
-    def _is_swahili(self, message: str) -> bool:
-        """Detect if the message is in Swahili based on common words."""
-        if not message or not isinstance(message, str):
-            return False
-        swahili_keywords = [
-            r'ninaweza', r'je\b', r'wapi', r'gani', r'kifaa', r'kupima',
-            r'afya', r'mwanamke', r'shukrani', r'tafadhali', r'habari',
-            r'nini', r'vipi', r'kwa\s', r'ya\s', r'na\s'
+        message_lower = message.lower().strip()
+        
+        # Greeting patterns
+        greeting_patterns = [
+            r'\b(hello|hi|hey|good morning|good afternoon|good evening|greetings)\b',
+            r'\b(start|begin|help)\b'
         ]
-        message = message.lower().strip()
-        matches = sum(1 for pattern in swahili_keywords if re.search(pattern, message, re.IGNORECASE))
-        return matches >= 2
-
-    def _is_kit_request(self, message: str) -> bool:
-        """Check if the user message indicates a request to order a screening kit."""
-        if not message or not isinstance(message, str):
-            return False
-        kit_keywords = [
-            r'order.*kit', r'request.*screening', r'get.*kit', r'need.*kit',
-            r'want.*kit', r'screening.*kit', r'test.*kit',
-            r'kifaa.*kupima', r'pata.*kifaa', r'omba.*kifaa', r'nataka.*kifaa'
+        
+        # Billing patterns
+        billing_patterns = [
+            r'\b(bill|billing|charge|payment|invoice|overcharge|overbill)\b',
+            r'\b(nerc|cap|capping|too high|expensive|unfair)\b',
+            r'\b(complain|complaint|dispute|query)\b.*\b(bill|charge)',
+            r'\b(my bill|bill is)\b'
         ]
-        return any(re.search(pattern, message.lower(), re.IGNORECASE) for pattern in kit_keywords)
-
-    def _is_result_request(self, message: str) -> bool:
-        """Check if the user message is requesting test results."""
-        if not message or not isinstance(message, str):
-            return False
-        result_keywords = [
-            r'\bresult', r'test result', r'my result', r'check result',
-            r'outcome', r'pima.*matokeo', r'\bmatokeo', r'check.*result',
-            r'show.*result', r'view.*result'
+        
+        # Metering patterns
+        metering_patterns = [
+            r'\b(meter|prepaid|postpaid|map|meter asset provider)\b',
+            r'\b(order.*meter|get.*meter|apply.*meter|request.*meter)\b',
+            r'\b(want.*meter|need.*meter|installation)\b'
         ]
-        return any(re.search(pattern, message.lower(), re.IGNORECASE) for pattern in result_keywords)
+        
+        # Fault patterns
+        fault_patterns = [
+            r'\b(fault|outage|power.*out|no.*power|no.*light|blackout)\b',
+            r'\b(electricity.*gone|power.*cut|down|not working)\b',
+            r'\b(report.*fault|report.*outage|problem.*supply)\b'
+        ]
+        
+        # FAQ patterns
+        faq_patterns = [
+            r'\b(multiple.*meter|several.*meter|more than one)\b',
+            r'\b(new customer|no account|open.*account|create.*account)\b',
+            r'\b(how.*work|what.*is|tell.*about)\b'
+        ]
+        
+        # Check patterns in priority order
+        if any(re.search(pattern, message_lower) for pattern in greeting_patterns):
+            return "greeting"
+        elif any(re.search(pattern, message_lower) for pattern in billing_patterns):
+            return "billing"
+        elif any(re.search(pattern, message_lower) for pattern in metering_patterns):
+            return "metering"
+        elif any(re.search(pattern, message_lower) for pattern in fault_patterns):
+            return "fault"
+        elif any(re.search(pattern, message_lower) for pattern in faq_patterns):
+            return "faq"
+        
+        return "unknown"
 
-    def _extract_email(self, message: str) -> str:
-        """Extract email from user message if present."""
-        if not message or not isinstance(message, str):
+    def extract_account_number(self, message: str) -> Optional[str]:
+        """Extract account number from message."""
+        if not message:
             return None
-        email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', message)
-        return email_match.group(0) if email_match else None
+        
+        # Look for 6-digit account numbers starting with 10
+        match = re.search(r'\b(10\d{4})\b', message)
+        return match.group(1) if match else None
 
-    def _extract_name(self, message: str) -> str:
-        """Extract a name from user message if present (basic heuristic)."""
-        if not message or not isinstance(message, str):
+    def extract_email(self, message: str) -> Optional[str]:
+        """Extract email from message."""
+        if not message:
             return None
-        name_match = re.search(r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b', message)
-        return name_match.group(0) if name_match else None
+        
+        match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', message)
+        return match.group(0) if match else None
 
-    def _validate_email(self, email: str) -> bool:
-        """Validate email format."""
-        if not email or not isinstance(email, str):
-            return False
-        email_pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
-        return bool(re.match(email_pattern, email))
+    def handle_greeting(self, user_name: str = "Customer") -> str:
+        """Generate greeting response."""
+        return f"""Hello {user_name}! Welcome to BEDC Customer Support. 🌟
 
-    def _extract_location(self, message: str) -> str:
-        """Extract location from user message (e.g., county or city)."""
-        if not message or not isinstance(message, str):
-            return None
-        location_match = re.search(
-            r'\b(Nairobi|Mombasa|Kisumu|Nakuru|Eldoret|Thika|Malindi|Kitale|'
-            r'Garissa|Kakamega|Nyeri|Machakos|Meru|Embu|Kericho|Kisii|'
-            r'Kilifi|Kwale|Lamu|Taita|Taveta|Bungoma|Busia|Siaya|Migori|'
-            r'Homa Bay|Narok|Kajiado|Turkana|West Pokot|Samburu|'
-            r'Trans Nzoia|Uasin Gishu|Elgeyo Marakwet|Nandi|Baringo|'
-            r'Laikipia|Nyamira|Vihiga|Bomet|Makueni|Kitui|Tharaka|Nithi|'
-            r'Marsabit|Isiolo|Mandera|Wajir|Tana River|Murang\'?a|Kiambu|'
-            r'Nyandarua|Kirinyaga|County)\b',
-            message, 
-            re.IGNORECASE
-        )
-        return location_match.group(0) if location_match else None
+I'm here to help you with:
+📋 Billing inquiries and complaints
+⚡ Meter applications (MAP enrollment)
+🔧 Fault reporting and power outages
+❓ General questions about our services
 
-    def process_kit_request(self, user_message: str, phone_number: str, user_name: str = None, session_id: str = None) -> tuple[str, bool, str, str]:
+How may I assist you today?"""
+
+    def handle_billing_inquiry(self, message: str, account_number: str = None) -> Tuple[str, bool, Optional[str]]:
         """
-        Process a screening kit request, checking for location and name.
+        Handle billing-related inquiries.
+
+        Returns:
+            Tuple[str, bool, Optional[str]]: (response, needs_account_number, detected_account)
         """
-        if not user_message or not phone_number:
-            logger.error(f"Invalid input: user_message={user_message}, phone_number={phone_number}")
-            response = "🤖 Sorry, I couldn't process your request. Please provide valid input."
-            if self._is_swahili(user_message):
-                response = "🤖 Samahani, sikuweza kushughulikia ombi lako. Tafadhali toa maelezo sahihi."
-            return response, False, None, None
+        # Check if account number is in message
+        if not account_number:
+            account_number = self.extract_account_number(message)
+        
+        if not account_number:
+            return (
+                "I understand you have a billing concern. To assist you properly, "
+                "please provide your 6-digit account number (e.g., 100001).",
+                True,
+                None
+            )
+        
+        # Check billing status
+        result = self.data_manager.check_billing_status(account_number)
+        
+        if result["status"] == "not_found":
+            return (
+                f"I apologize, but I couldn't find account number {account_number} in our records. "
+                "Please verify the account number and try again, or visit our office for assistance.",
+                False,
+                account_number
+            )
+        
+        customer = result["customer_data"]
+        bill = result["bill_amount"]
+        cap = result["nerc_cap"]
+        
+        if result["status"] == "within_cap":
+            response = f"""Dear {customer['customer_name']},
 
-        location = self._extract_location(user_message)
-        name = user_name or self._extract_name(user_message)
+I've reviewed your account ({account_number}) on {customer['feeder']} feeder.
 
-        if location and name:
-            try:
-                response = (
-                    f"Thank you, {name}! Your request for a cervical screening kit in {location} has been received. 🎉\n"
-                    "A Community Health Worker will contact you soon to arrange delivery. Anything else I can help with?"
-                )
-                if self._is_swahili(user_message):
-                    response = (
-                        f"Asante, {name}! Ombi lako la kifaa cha uchunguzi wa saratani ya shingo ya kizazi huko {location} limepokewa. 🎉\n"
-                        "Mhudumu wa Afya ya Jamii atakupigia simu hivi karibuni kupanga utoaji. Je, kuna jambo lingine laweza kukusaidia?"
-                    )
-                return response, False, location, name
-            except Exception as e:
-                logger.error(f"Error processing kit request for {phone_number}: {e}", exc_info=True)
-                response = (
-                    "🤖 Sorry, I couldn't process your kit request right now. Please try again or contact a health worker."
-                )
-                if self._is_swahili(user_message):
-                    response = (
-                        "🤖 Samahani, sikuweza kushughulikia ombi lako la kifaa sasa hivi. Tafadhali jaribu tena au wasiliana na mhudumu wa afya."
-                    )
-                return response, False, None, None
+📊 Current Bill: ₦{bill:,}
+📈 NERC Cap: ₦{cap:,}
+✅ Status: WITHIN regulatory limits
+
+Your billing follows the NERC-approved methodology for unmetered customers. 
+
+💡 To avoid estimated billing, I recommend enrolling in our Meter Asset Provider (MAP) scheme for a prepaid meter.
+
+Visit: https://bedc.com/order-meter to apply online.
+
+Is there anything else I can help you with?"""
         else:
-            missing = []
-            if not location:
-                missing.append("your area or county")
-            if not name:
-                missing.append("your name")
-            response = (
-                f"Thank you for your interest in a cervical screening kit! 🎉\n"
-                f"Please provide {' and '.join(missing)} to complete your request."
-            )
-            if self._is_swahili(user_message):
-                missing_sw = []
-                if not location:
-                    missing_sw.append("eneo lako au kaunti")
-                if not name:
-                    missing_sw.append("jina lako")
-                response = (
-                    f"Asante kwa nia yako ya kupata kifaa cha uchunguzi wa saratani ya shingo ya kizazi! 🎉\n"
-                    f"Tafadhali toa {' na '.join(missing_sw)} ili kukamilisha ombi lako."
-                )
-            logger.info(f"Prompting for missing kit request info: {missing} for phone_number={phone_number}")
-            return response, True, location, name
+            diff = result["difference"]
+            response = f"""Dear {customer['customer_name']},
 
-    def process_result_request(self, user_message: str, phone_number: str, user_name: str = None, session_id: str = None) -> str:
-        """
-        Process a request for test results via AFYA KE system.
-        """
-        if not self.ai_enabled:
-            response = "🤖 Test result feature unavailable. Please contact your health provider directly!"
-            if self._is_swahili(user_message):
-                response = "🤖 Kipengele cha matokeo ya mtihani hakipatikani. Tafadhali wasiliana na mtoa huduma wako wa afya moja kwa moja!"
-            return response
+I sincerely apologize for the inconvenience regarding your billing.
 
-        try:
-            response = (
-                "🤖 I couldn't find your test results. Please provide your AFYA KE ID or contact your health provider."
-            )
-            if self._is_swahili(user_message):
-                response = (
-                    "🤖 Sikuweza kupata matokeo yako ya mtihani. Tafadhali toa kitambulisho chako cha AFYA KE au wasiliana na mtoa huduma wako wa afya."
-                )
-            return response
-        except Exception as e:
-            logger.error(f"Error processing test result request for {phone_number}: {e}", exc_info=True)
-            response = (
-                "🤖 Unable to retrieve test results right now. Please contact your health provider directly!"
-            )
-            if self._is_swahili(user_message):
-                response = (
-                    "🤖 Sishindikani kupata matokeo ya mtihani sasa hivi. Tafadhali wasiliana na mtoa huduma wako wa afya moja kwa moja!"
-                )
-            return response
+📊 Current Bill: ₦{bill:,}
+📈 NERC Cap: ₦{cap:,}
+⚠️ Status: ₦{diff:,} ABOVE the regulatory cap
 
-    def generate_medical_response(self, user_message: str, conversation_history: List[Dict] = None, phone_number: str = None, user_name: str = None, session_id: str = None) -> tuple[str, bool, str, str]:
+I acknowledge this discrepancy. Our billing team will review and adjust your account within ONE billing cycle.
+
+💡 To prevent future billing issues, I strongly encourage you to enroll in our MAP scheme for a prepaid meter: https://bedc.com/order-meter
+
+Would you like me to log your MAP application interest?"""
+        
+        return (response, False, account_number)
+
+    def handle_metering_inquiry(self, message: str) -> Tuple[str, str]:
         """
-        Generates an AI response for gynecology-related inquiries using RAG.
+        Handle meter-related inquiries.
+
+        Returns:
+            Tuple[str, str]: (response, next_action)
+        """
+        message_lower = message.lower()
+        
+        # Check if user has account number
+        account_number = self.extract_account_number(message)
+        
+        if "new customer" in message_lower or "no account" in message_lower or "don't have account" in message_lower:
+            return (
+                """For new customers without a postpaid account:
+
+📍 You'll need to visit our office to create an account first.
+
+**BEDC Customer Service Center**
+📌 Address: Ring Road, Benin City
+⏰ Hours: Monday-Friday, 8:00 AM - 4:00 PM
+
+Please bring:
+- Valid ID
+- Proof of address
+- Utility bill (if available)
+
+After your account is created, you can apply for a prepaid meter through MAP.
+
+Any other questions?""",
+                "office_visit_required"
+            )
+        
+        if "multiple" in message_lower or "several" in message_lower or "more than one" in message_lower:
+            return (
+                """⚠️ Important Policy:
+
+One postpaid account number CANNOT be used for multiple meter applications.
+
+Each meter location requires a separate account. If you need meters for multiple properties, you must:
+1. Create separate accounts for each location
+2. Apply for MAP enrollment individually
+
+Visit our office for assistance with multiple accounts.
+
+How else can I help?""",
+                "policy_clarification"
+            )
+        
+        # Standard MAP enrollment guidance
+        return (
+            """**Meter Asset Provider (MAP) Enrollment Guide** ⚡
+
+To get your prepaid meter:
+
+1️⃣ Visit: https://bedc.com/order-meter
+2️⃣ Click "Order a Meter"
+3️⃣ Fill in your account details
+4️⃣ Complete payment
+5️⃣ Installation scheduled within 2-4 weeks
+
+📋 Requirements:
+- Valid BEDC account number
+- Correct contact information
+- Payment for meter cost
+
+Need help with the application process?""",
+            "map_enrollment"
+        )
+
+    def handle_fault_report(self, message: str, phone_number: str, 
+                           collected_data: Dict = None) -> Tuple[str, bool, Dict]:
+        """
+        Handle fault/outage reporting with data collection.
+
+        Returns:
+            Tuple[str, bool, Dict]: (response, needs_more_data, collected_data)
+        """
+        if collected_data is None:
+            collected_data = {}
+        
+        # Extract information from message
+        account_number = collected_data.get("account_number") or self.extract_account_number(message)
+        email = collected_data.get("email") or self.extract_email(message)
+        
+        # Update collected data
+        if account_number:
+            collected_data["account_number"] = account_number
+        if email:
+            collected_data["email"] = email
+        if not collected_data.get("phone_number"):
+            collected_data["phone_number"] = phone_number
+        if not collected_data.get("fault_description"):
+            collected_data["fault_description"] = message
+        
+        # Check if we have all required information
+        missing = []
+        if not collected_data.get("account_number"):
+            missing.append("account number")
+        if not collected_data.get("email"):
+            missing.append("email address")
+        
+        if missing:
+            return (
+                f"""I understand you're experiencing a power outage. I sincerely apologize for this inconvenience.
+
+To log your fault report, I need your:
+{chr(10).join(f'- {item.title()}' for item in missing)}
+
+Please provide the missing information.""",
+                True,
+                collected_data
+            )
+        
+        # Save fault report
+        success = self.data_manager.save_fault_report(
+            collected_data["phone_number"],
+            collected_data["account_number"],
+            collected_data["email"],
+            collected_data.get("fault_description", "Power outage reported")
+        )
+        
+        if success:
+            return (
+                f"""✅ Fault Report Logged Successfully
+
+📋 Reference: FR-{collected_data['account_number']}-{datetime.now().strftime('%Y%m%d')}
+📞 Phone: {collected_data['phone_number']}
+📧 Email: {collected_data['email']}
+
+Our technical team will investigate and contact you within 24-48 hours.
+
+We apologize for the inconvenience and appreciate your patience.
+
+Is there anything else I can help you with?""",
+                False,
+                {}
+            )
+        else:
+            return (
+                "I apologize, but there was an error logging your fault report. "
+                "Please try again or contact our office directly.",
+                False,
+                {}
+            )
+
+    def generate_response(self, user_message: str, conversation_history: List[Dict] = None,
+                         phone_number: str = None, user_name: str = None,
+                         session_state: Dict = None) -> Tuple[str, str, Dict]:
+        """
+        Generate AI response using intent detection and appropriate handler.
+
+        Returns:
+            Tuple[str, str, Dict]: (response, intent, updated_state)
         """
         if not user_message or not isinstance(user_message, str):
-            logger.error(f"Invalid user message: {user_message}")
-            response = "🤖 Sorry, I couldn't understand your request. Please try again."
-            return response, False, None, None
-
-        if not self.ai_enabled or not self.agent_executor:
-            response = (
-                "🤖 Sorry, I'm currently offline. Please contact a health provider directly!"
+            return ("I'm sorry, I didn't receive a valid message. How can I help you?", "unknown", {})
+        
+        if session_state is None:
+            session_state = {}
+        
+        # Detect intent
+        intent = self.detect_intent(user_message)
+        logger.info(f"Detected intent: {intent} for message: {user_message[:50]}")
+        
+        # Handle based on intent
+        if intent == "greeting":
+            response = self.handle_greeting(user_name or "Customer")
+            return (response, intent, {})
+        
+        elif intent == "billing":
+            response, needs_account, account = self.handle_billing_inquiry(user_message)
+            state_update = {"needs_account_number": needs_account}
+            if account:
+                state_update["account_number"] = account
+            return (response, intent, state_update)
+        
+        elif intent == "metering":
+            response, next_action = self.handle_metering_inquiry(user_message)
+            return (response, intent, {"next_action": next_action})
+        
+        elif intent == "fault":
+            collected_data = session_state.get("fault_data", {})
+            response, needs_more, updated_data = self.handle_fault_report(
+                user_message, phone_number, collected_data
             )
-            if self._is_swahili(user_message):
-                response = (
-                    "🤖 Samahani, niko nje ya mtandao sasa hivi. Tafadhali wasiliana na mtoa huduma wa afya moja kwa moja!"
-                )
-            return response, False, None, None
+            state_update = {"fault_data": updated_data} if needs_more else {}
+            return (response, intent, state_update)
+        
+        elif intent == "faq":
+            # Handle FAQ intent
+            response = """I'm here to help! Here are some common questions:
 
-        # Handle kit requests
-        if self._is_kit_request(user_message):
-            return self.process_kit_request(user_message, phone_number, user_name, session_id)
+**Multiple Meters**: One account cannot be used for multiple meter applications
+**New Customers**: Visit our office to create an account first
+**MAP Enrollment**: Visit https://bedc.com/order-meter to apply for a prepaid meter
+**Billing Issues**: Provide your account number to check your bill status
 
-        # Handle test result requests
-        if self._is_result_request(user_message):
-            response = self.process_result_request(user_message, phone_number, user_name, session_id)
-            return response, False, None, None
+What specific question do you have?"""
+            return (response, intent, {})
+        
+        else:
+            # Default response for unknown intents
+            return (
+                """I'm here to help with:
+- Billing inquiries and complaints
+- Meter applications (MAP enrollment)
+- Fault reports and power outages
+- General BEDC service questions
 
-        # Generate RAG-based response
-        try:
-            logger.info(f"Generating medical response for: {user_message[:100]}")
-            
-            # Prepare conversation history for context
-            chat_history = []
-            if conversation_history:
-                for exchange in conversation_history[-5:]:
-                    chat_history.append(("human", exchange.get("user", "")))
-                    chat_history.append(("ai", exchange.get("assistant", "")))
-
-            # Invoke RAG agent
-            result = self.agent_executor.invoke({
-                "input": user_message,
-                "chat_history": chat_history
-            })
-            
-            ai_response = result.get("output", "")
-            
-            if not ai_response or ai_response.strip() == "":
-                raise ValueError("Empty response from agent")
-            
-            logger.info(f"Generated response: {ai_response[:100]}")
-
-            # Don't add extra disclaimers if response already contains guidance
-            if "contact" not in ai_response.lower() and "health" not in ai_response.lower():
-                if self._is_swahili(user_message):
-                    ai_response = (
-                        f"{ai_response}\n\n💙 Kwa maelezo zaidi, wasiliana na mhudumu wa afya."
-                    )
-                else:
-                    ai_response = (
-                        f"{ai_response}\n\n💙 For personalized advice, please consult a healthcare professional."
-                    )
-            
-            return ai_response, False, None, None
-
-        except Exception as e:
-            logger.error(f"Error generating medical response for message '{user_message}': {e}", exc_info=True)
-            response = (
-                "🤖 I'm having trouble processing your request right now. Please contact a health provider directly!"
+Please let me know how I can assist you!""",
+                "unknown",
+                {}
             )
-            if self._is_swahili(user_message):
-                response = (
-                    "🤖 Nina shida kushughulikia ombi lako sasa hivi. Tafadhali wasiliana na mtoa huduma wa afya moja kwa moja!"
-                )
-            return response, False, None, None

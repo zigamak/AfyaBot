@@ -6860,3 +6860,100 @@ NameError: name 'datetime' is not defined. Did you forget to import 'datetime'
 2025-11-03 20:49:45,230 - werkzeug - INFO - 127.0.0.1 - - [03/Nov/2025 20:49:45] "POST /webhook HTTP/1.1" 200 -
 2025-11-03 21:10:54,441 - handlers.webhook_handler - WARNING - No valid message data extracted for 2347086490203. Message type: reaction
 2025-11-03 21:10:54,442 - werkzeug - INFO - 127.0.0.1 - - [03/Nov/2025 21:10:54] "POST /webhook HTTP/1.1" 200 -
+2026-01-17 13:56:06,147 - __main__ - INFO - Starting Wallpaper.ng AI Assistant server...
+2026-01-17 13:56:15,007 - utils.session_manager - INFO - SessionManager initialized. Default timeouts: Unpaid=3000s, Paid=12000s
+2026-01-17 13:56:15,586 - utils.data_manager - INFO - Supabase client initialized successfully
+2026-01-17 13:56:16,073 - utils.data_manager - WARNING - Table kit_requests may not exist or is inaccessible: [Errno 11001] getaddrinfo failed. Please create it in the Supabase dashboard.
+2026-01-17 13:56:16,073 - utils.data_manager - INFO - Required schema for kit_requests: 
+                CREATE TABLE kit_requests (
+                    id SERIAL PRIMARY KEY,
+                    phone_number VARCHAR(20) UNIQUE NOT NULL,
+                    name VARCHAR(100),
+                    location VARCHAR(100),
+                    request_details TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            
+2026-01-17 13:56:16,073 - utils.data_manager - WARNING - Table test_results may not exist or is inaccessible: [Errno 11001] getaddrinfo failed. Please create it in the Supabase dashboard.
+2026-01-17 13:56:16,073 - utils.data_manager - INFO - Required schema for test_results: 
+                CREATE TABLE test_results (
+                    id SERIAL PRIMARY KEY,
+                    phone_number VARCHAR(20) UNIQUE NOT NULL,
+                    result TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            
+2026-01-17 13:56:16,073 - utils.data_manager - WARNING - Table conversations may not exist or is inaccessible: [Errno 11001] getaddrinfo failed. Please create it in the Supabase dashboard.
+2026-01-17 13:56:16,073 - utils.data_manager - INFO - Required schema for conversations: 
+                CREATE TABLE conversations (
+                    id SERIAL PRIMARY KEY,
+                    phone_number VARCHAR(20) NOT NULL,
+                    session_id VARCHAR(100),
+                    user_message TEXT,
+                    assistant_response TEXT,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE INDEX idx_conversations_phone_number ON conversations(phone_number);
+                CREATE INDEX idx_conversations_timestamp ON conversations(timestamp);
+            
+2026-01-17 13:56:16,073 - services.whatsapp_service - DEBUG - WhatsAppService initialized with phone_number_id: 846412388549528
+2026-01-17 13:56:16,073 - app - INFO - Core services initialized for AfyaBot (Gynecology Medical AI)
+2026-01-17 13:56:16,089 - services.ai_service - INFO - Configuration check - Supabase URL: set
+2026-01-17 13:56:16,089 - services.ai_service - INFO - Configuration check - Supabase Key: set
+2026-01-17 13:56:16,089 - services.ai_service - INFO - Configuration check - OpenAI API Key: set
+2026-01-17 13:56:16,089 - services.ai_service - INFO - AI Enabled: True
+2026-01-17 13:56:16,451 - services.ai_service - INFO - Supabase client initialized successfully
+2026-01-17 13:56:17,169 - services.ai_service - INFO - Vector store initialized successfully
+2026-01-17 13:56:18,078 - services.ai_service - INFO - RAG pipeline initialized successfully for Gynecology Medical AI.
+2026-01-17 13:56:18,078 - handlers.ai_handler - INFO - AIHandler: AIService successfully initialized for Gynecology Medical AI.
+2026-01-17 13:56:18,078 - services.ai_service - INFO - Configuration check - Supabase URL: set
+2026-01-17 13:56:18,078 - services.ai_service - INFO - Configuration check - Supabase Key: set
+2026-01-17 13:56:18,078 - services.ai_service - INFO - Configuration check - OpenAI API Key: set
+2026-01-17 13:56:18,078 - services.ai_service - INFO - AI Enabled: True
+2026-01-17 13:56:18,490 - services.ai_service - INFO - Supabase client initialized successfully
+2026-01-17 13:56:19,300 - services.ai_service - INFO - Vector store initialized successfully
+2026-01-17 13:56:20,133 - services.ai_service - INFO - RAG pipeline initialized successfully for Gynecology Medical AI.
+2026-01-17 13:56:20,133 - handlers.ai_handler - INFO - AIHandler: AIService successfully initialized for Gynecology Medical AI.
+2026-01-17 13:56:20,133 - message_processor - INFO - MessageProcessor initialized for Gynecology Medical AI (AfyaBot).
+2026-01-17 13:56:20,134 - app - INFO - AfyaBot handlers and message processor initialized.
+2026-01-17 13:56:20,134 - utils.session_manager - INFO - SessionManager initialized. Default timeouts: Unpaid=3000s, Paid=12000s
+2026-01-17 13:56:20,562 - utils.data_manager - INFO - Supabase client initialized successfully
+2026-01-17 13:56:20,997 - utils.data_manager - WARNING - Table kit_requests may not exist or is inaccessible: [Errno 11001] getaddrinfo failed. Please create it in the Supabase dashboard.
+2026-01-17 13:56:20,997 - utils.data_manager - INFO - Required schema for kit_requests: 
+                CREATE TABLE kit_requests (
+                    id SERIAL PRIMARY KEY,
+                    phone_number VARCHAR(20) UNIQUE NOT NULL,
+                    name VARCHAR(100),
+                    location VARCHAR(100),
+                    request_details TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            
+2026-01-17 13:56:20,997 - utils.data_manager - WARNING - Table test_results may not exist or is inaccessible: [Errno 11001] getaddrinfo failed. Please create it in the Supabase dashboard.
+2026-01-17 13:56:20,997 - utils.data_manager - INFO - Required schema for test_results: 
+                CREATE TABLE test_results (
+                    id SERIAL PRIMARY KEY,
+                    phone_number VARCHAR(20) UNIQUE NOT NULL,
+                    result TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            
+2026-01-17 13:56:20,997 - utils.data_manager - WARNING - Table conversations may not exist or is inaccessible: [Errno 11001] getaddrinfo failed. Please create it in the Supabase dashboard.
+2026-01-17 13:56:20,997 - utils.data_manager - INFO - Required schema for conversations: 
+                CREATE TABLE conversations (
+                    id SERIAL PRIMARY KEY,
+                    phone_number VARCHAR(20) NOT NULL,
+                    session_id VARCHAR(100),
+                    user_message TEXT,
+                    assistant_response TEXT,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE INDEX idx_conversations_phone_number ON conversations(phone_number);
+                CREATE INDEX idx_conversations_timestamp ON conversations(timestamp);
+            
+2026-01-17 13:56:20,997 - services.whatsapp_service - DEBUG - WhatsAppService initialized with phone_number_id: 846412388549528
+2026-01-17 13:56:20,997 - services.payment_service - INFO - PaymentService initialized
+2026-01-17 13:56:20,997 - app - INFO - WebhookHandler initialized with message processor.
+2026-01-17 13:56:21,036 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8000
+2026-01-17 13:56:21,036 - werkzeug - INFO - [33mPress CTRL+C to quit[0m

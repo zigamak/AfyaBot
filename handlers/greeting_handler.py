@@ -12,7 +12,7 @@ logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
 class GreetingHandler(BaseHandler):
-    """Simplified greeting handler for Gynecology Medical AI (AfyaBot) that redirects to AI chat."""
+    """Simplified greeting handler for BEDC Support Bot that redirects to AI chat."""
 
     def handle_greeting_state(self, state: Dict, message: str, original_message: str, session_id: str) -> Dict[str, Any]:
         """Handle greeting state messages - redirect everything to AI chat."""
@@ -38,7 +38,7 @@ class GreetingHandler(BaseHandler):
         
         # Ensure user info is preserved
         if not state.get("user_name"):
-            state["user_name"] = "Guest"
+            state["user_name"] = "Customer"
         if not state.get("phone_number"):
             state["phone_number"] = session_id
             

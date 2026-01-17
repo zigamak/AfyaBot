@@ -1,146 +1,159 @@
 import logging
 import os
-from typing import Dict, List, Any
+import json
+from typing import Dict, List, Any, Optional
 from datetime import datetime
-from dotenv import load_dotenv
-from supabase import create_client, Client
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 class DataManager:
-    """Manages database interactions for AfyaBot, including kit requests, test results, and conversations."""
+    """Manages data interactions for BEDC WhatsApp Bot using JSON file storage."""
 
     def __init__(self, config=None):
         """
-        Initialize DataManager with Supabase client using configuration or environment variables.
+        Initialize DataManager with JSON file paths.
 
         Args:
-            config: Configuration object or dictionary with Supabase credentials.
+            config: Configuration object or dictionary (optional for JSON-based storage)
         """
-        load_dotenv()
+        # Set up data directory
+        self.data_dir = Path(__file__).parent.parent / "data"
+        self.data_dir.mkdir(exist_ok=True)
         
-        # Get Supabase credentials from config or environment
-        if isinstance(config, dict):
-            self.supabase_url = config.get("supabase_url")
-            self.supabase_key = config.get("supabase_service_key")
-        else:
-            self.supabase_url = getattr(config, 'SUPABASE_URL', os.getenv("SUPABASE_URL"))
-            self.supabase_key = getattr(config, 'SUPABASE_SERVICE_KEY', os.getenv("SUPABASE_SERVICE_KEY"))
+        # Define file paths
+        self.customer_data_file = self.data_dir / "customer_data.json"
+        self.conversations_file = self.data_dir / "conversations.json"
+        self.fault_reports_file = self.data_dir / "fault_reports.json"
+        self.map_applications_file = self.data_dir / "map_applications.json"
         
-        if not self.supabase_url or not self.supabase_key:
-            logger.error("Supabase URL or Service Key not found in environment variables or config")
-            raise ValueError("SUPABASE_URL or SUPABASE_SERVICE_KEY is missing")
+        # Initialize data structures
+        self.customer_data = self._load_json(self.customer_data_file, {"customers": [], "feeders": {}})
+        self.conversations = self._load_json(self.conversations_file, {})
+        self.fault_reports = self._load_json(self.fault_reports_file, [])
+        self.map_applications = self._load_json(self.map_applications_file, [])
+        
+        logger.info("DataManager initialized with JSON file storage")
+        logger.info(f"Loaded {len(self.customer_data.get('customers', []))} customer records")
 
+    def _load_json(self, filepath: Path, default: Any) -> Any:
+        """Load JSON data from file or return default if file doesn't exist."""
         try:
-            # Initialize Supabase client
-            self.supabase_client = create_client(self.supabase_url, self.supabase_key)
-            logger.info("Supabase client initialized successfully")
-            self._verify_tables()
+            if filepath.exists():
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            else:
+                # Create file with default data
+                self._save_json(filepath, default)
+                return default
         except Exception as e:
-            logger.error(f"Failed to initialize Supabase client: {e}", exc_info=True)
-            raise
+            logger.error(f"Error loading {filepath}: {e}")
+            return default
 
-    def _verify_tables(self):
-        """
-        Verify that required tables exist in Supabase by attempting a simple query.
-        Note: Supabase tables must be pre-created in the dashboard or via SQL.
-        """
-        required_tables = ["kit_requests", "test_results", "conversations"]
-        for table in required_tables:
-            try:
-                # Attempt a lightweight query to check table existence
-                self.supabase_client.table(table).select("id").limit(0).execute()
-                logger.info(f"Table {table} verified in Supabase")
-            except Exception as e:
-                logger.warning(f"Table {table} may not exist or is inaccessible: {e}. Please create it in the Supabase dashboard.")
-                logger.info(f"Required schema for {table}: {self._get_table_schema(table)}")
-
-    def _get_table_schema(self, table_name: str) -> str:
-        """Return the SQL schema for a given table for logging purposes."""
-        schemas = {
-            "kit_requests": """
-                CREATE TABLE kit_requests (
-                    id SERIAL PRIMARY KEY,
-                    phone_number VARCHAR(20) UNIQUE NOT NULL,
-                    name VARCHAR(100),
-                    location VARCHAR(100),
-                    request_details TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-            """,
-            "test_results": """
-                CREATE TABLE test_results (
-                    id SERIAL PRIMARY KEY,
-                    phone_number VARCHAR(20) UNIQUE NOT NULL,
-                    result TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-            """,
-            "conversations": """
-                CREATE TABLE conversations (
-                    id SERIAL PRIMARY KEY,
-                    phone_number VARCHAR(20) NOT NULL,
-                    session_id VARCHAR(100),
-                    user_message TEXT,
-                    assistant_response TEXT,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-                CREATE INDEX idx_conversations_phone_number ON conversations(phone_number);
-                CREATE INDEX idx_conversations_timestamp ON conversations(timestamp);
-            """
-        }
-        return schemas.get(table_name, "Unknown table")
-
-    def _truncate_string(self, value: str, max_length: int, field_name: str) -> str:
-        """Helper method to safely truncate strings to fit database constraints."""
-        if value and isinstance(value, str) and len(value) > max_length:
-            truncated = value[:max_length]
-            logger.warning(f"Truncated {field_name} from '{value}' to '{truncated}' (max length: {max_length})")
-            return truncated
-        return value
-
-    def _validate_phone_number(self, phone_number: str) -> bool:
-        """Validate phone number is not empty and within length constraints."""
-        if not phone_number or not isinstance(phone_number, str):
-            logger.error("Phone number cannot be empty or None")
+    def _save_json(self, filepath: Path, data: Any) -> bool:
+        """Save data to JSON file."""
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            return True
+        except Exception as e:
+            logger.error(f"Error saving to {filepath}: {e}")
             return False
-        if len(phone_number) > 20:
-            logger.error(f"Phone number '{phone_number}' exceeds 20 characters")
-            return False
-        return True
 
-    def save_conversation(self, phone_number: str, session_id: str, user_message: str, assistant_response: str):
+    def get_customer_by_account(self, account_number: str) -> Optional[Dict[str, Any]]:
         """
-        Save a conversation entry for a given phone number.
+        Retrieve customer information by account number.
+
+        Args:
+            account_number (str): Customer's account number
+
+        Returns:
+            Optional[Dict[str, Any]]: Customer data or None if not found
+        """
+        try:
+            customers = self.customer_data.get("customers", [])
+            for customer in customers:
+                if customer.get("account_number") == account_number:
+                    logger.info(f"Found customer: {account_number}")
+                    return customer
+            logger.info(f"Customer not found: {account_number}")
+            return None
+        except Exception as e:
+            logger.error(f"Error retrieving customer {account_number}: {e}")
+            return None
+
+    def check_billing_status(self, account_number: str) -> Dict[str, Any]:
+        """
+        Check if customer's billing is within NERC cap.
+
+        Args:
+            account_number (str): Customer's account number
+
+        Returns:
+            Dict with keys: status, customer_data, bill_amount, nerc_cap, difference
+        """
+        try:
+            customer = self.get_customer_by_account(account_number)
+            if not customer:
+                return {
+                    "status": "not_found",
+                    "message": "Account number not found in our records"
+                }
+            
+            bill_amount = customer.get("bill_amount", 0)
+            nerc_cap = customer.get("nerc_cap", 0)
+            difference = bill_amount - nerc_cap
+            
+            if bill_amount <= nerc_cap:
+                status = "within_cap"
+            else:
+                status = "above_cap"
+            
+            return {
+                "status": status,
+                "customer_data": customer,
+                "bill_amount": bill_amount,
+                "nerc_cap": nerc_cap,
+                "difference": difference
+            }
+        except Exception as e:
+            logger.error(f"Error checking billing status for {account_number}: {e}")
+            return {"status": "error", "message": str(e)}
+
+    def save_conversation(self, phone_number: str, session_id: str, user_message: str, 
+                         assistant_response: str, intent: str = None):
+        """
+        Save a conversation entry.
 
         Args:
             phone_number (str): User's phone number
             session_id (str): Session identifier
             user_message (str): User's message
-            assistant_response (str): Assistant's response
+            assistant_response (str): Bot's response
+            intent (str): Detected intent (optional)
         """
         try:
-            if not self._validate_phone_number(phone_number):
-                raise ValueError("Invalid phone number for saving conversation")
+            if phone_number not in self.conversations:
+                self.conversations[phone_number] = []
             
-            # Validate and truncate fields
-            phone_number = self._truncate_string(phone_number, 20, "phone_number")
-            session_id = self._truncate_string(session_id, 100, "session_id") if session_id else None
-            user_message = self._truncate_string(user_message, 1000, "user_message") if user_message else None
-            assistant_response = self._truncate_string(assistant_response, 1000, "assistant_response") if assistant_response else None
-            
-            # Insert into conversations table
-            self.supabase_client.table("conversations").insert({
-                "phone_number": phone_number,
+            conversation_entry = {
                 "session_id": session_id,
                 "user_message": user_message,
                 "assistant_response": assistant_response,
+                "intent": intent,
                 "timestamp": datetime.now().isoformat()
-            }).execute()
-            logger.info(f"Saved conversation for phone_number: {phone_number}, session_id: {session_id}")
+            }
+            
+            self.conversations[phone_number].append(conversation_entry)
+            
+            # Keep only last 50 conversations per user
+            if len(self.conversations[phone_number]) > 50:
+                self.conversations[phone_number] = self.conversations[phone_number][-50:]
+            
+            self._save_json(self.conversations_file, self.conversations)
+            logger.info(f"Saved conversation for {phone_number}, intent: {intent}")
         except Exception as e:
-            logger.error(f"Error saving conversation for phone_number={phone_number}, session_id={session_id}: {e}", exc_info=True)
-            raise
+            logger.error(f"Error saving conversation: {e}")
 
     def get_conversation_history(self, phone_number: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
@@ -148,123 +161,136 @@ class DataManager:
 
         Args:
             phone_number (str): User's phone number
-            limit (int): Maximum number of conversations to return (default: 10)
+            limit (int): Maximum number of conversations to return
 
         Returns:
             List[Dict[str, Any]]: List of conversation entries
         """
         try:
-            if not self._validate_phone_number(phone_number):
-                raise ValueError("Invalid phone number for retrieving conversation history")
-            
-            phone_number = self._truncate_string(phone_number, 20, "phone_number")
-            
-            # Query conversations table
-            response = self.supabase_client.table("conversations").select("*").eq("phone_number", phone_number).order("timestamp", desc=True).limit(limit).execute()
-            return [
-                {
-                    "session_id": row["session_id"],
-                    "user": row["user_message"],
-                    "assistant": row["assistant_response"],
-                    "timestamp": row["timestamp"]
-                } for row in response.data
-            ]
+            conversations = self.conversations.get(phone_number, [])
+            return conversations[-limit:] if conversations else []
         except Exception as e:
-            logger.error(f"Error retrieving conversation history for {phone_number}: {e}", exc_info=True)
+            logger.error(f"Error retrieving conversation history: {e}")
             return []
 
-    def add_kit_request(self, phone_number: str, name: str = None, location: str = None, request_details: str = None):
+    def save_fault_report(self, phone_number: str, account_number: str, 
+                         email: str, fault_description: str) -> bool:
         """
-        Add or update a kit request in the kit_requests table.
-
-        Args:
-            phone_number (str): User's phone number (required)
-            name (str, optional): User's name
-            location (str, optional): User's location
-            request_details (str, optional): Additional request details
-        """
-        try:
-            if not self._validate_phone_number(phone_number):
-                raise ValueError("Invalid phone number for kit request")
-            
-            # Validate and truncate fields
-            phone_number = self._truncate_string(phone_number, 20, "phone_number")
-            name = self._truncate_string(name, 100, "name") if name else None
-            location = self._truncate_string(location, 100, "location") if location else None
-            request_details = self._truncate_string(request_details, 1000, "request_details") if request_details else None
-            
-            # Insert or update kit_requests table
-            self.supabase_client.table("kit_requests").upsert({
-                "phone_number": phone_number,
-                "name": name,
-                "location": location,
-                "request_details": request_details,
-                "created_at": datetime.now().isoformat()
-            }).execute()
-            logger.info(f"Successfully added/updated kit request: phone_number={phone_number}, name={name}, location={location}")
-        except Exception as e:
-            logger.error(f"Error adding/updating kit request for phone_number={phone_number}: {e}", exc_info=True)
-            raise
-
-    def get_test_result(self, phone_number: str, message: str = None) -> str:
-        """
-        Retrieve test result for a phone number from the AFYA KE system.
+        Save a fault/outage report.
 
         Args:
             phone_number (str): User's phone number
-            message (str, optional): User's message (for extracting AFYA KE ID if needed)
+            account_number (str): Customer's account number
+            email (str): User's email
+            fault_description (str): Description of the fault
 
         Returns:
-            str: Test result or None if not found
+            bool: True if saved successfully
         """
         try:
-            if not self._validate_phone_number(phone_number):
-                raise ValueError("Invalid phone number for test result retrieval")
+            fault_report = {
+                "phone_number": phone_number,
+                "account_number": account_number,
+                "email": email,
+                "fault_description": fault_description,
+                "status": "pending",
+                "timestamp": datetime.now().isoformat()
+            }
             
-            phone_number = self._truncate_string(phone_number, 20, "phone_number")
+            self.fault_reports.append(fault_report)
+            self._save_json(self.fault_reports_file, self.fault_reports)
+            logger.info(f"Saved fault report for account {account_number}")
+            return True
+        except Exception as e:
+            logger.error(f"Error saving fault report: {e}")
+            return False
+
+    def save_map_application(self, phone_number: str, account_number: str, 
+                           customer_name: str, email: str = None) -> bool:
+        """
+        Save a MAP (Meter Asset Provider) application request.
+
+        Args:
+            phone_number (str): User's phone number
+            account_number (str): Customer's account number
+            customer_name (str): Customer's name
+            email (str): User's email (optional)
+
+        Returns:
+            bool: True if saved successfully
+        """
+        try:
+            map_application = {
+                "phone_number": phone_number,
+                "account_number": account_number,
+                "customer_name": customer_name,
+                "email": email,
+                "status": "pending",
+                "timestamp": datetime.now().isoformat()
+            }
             
-            # Query test_results table (placeholder for AFYA KE integration)
-            response = self.supabase_client.table("test_results").select("result").eq("phone_number", phone_number).limit(1).execute()
-            if response.data:
-                return response.data[0]["result"]
-            logger.info(f"No test result found for phone_number={phone_number}")
-            return None
+            self.map_applications.append(map_application)
+            self._save_json(self.map_applications_file, self.map_applications)
+            logger.info(f"Saved MAP application for account {account_number}")
+            return True
         except Exception as e:
-            logger.error(f"Error retrieving test result for phone_number={phone_number}: {e}", exc_info=True)
-            return None
+            logger.error(f"Error saving MAP application: {e}")
+            return False
 
-    def get_kit_request_count(self) -> int:
+    def get_feeder_info(self, feeder_name: str) -> Optional[Dict[str, Any]]:
         """
-        Retrieve the total number of kit requests for analytics.
+        Get feeder information including NERC cap.
+
+        Args:
+            feeder_name (str): Name of the feeder
 
         Returns:
-            int: Number of kit requests
+            Optional[Dict[str, Any]]: Feeder information or None
         """
         try:
-            response = self.supabase_client.table("kit_requests").select("count", count="exact").execute()
-            return response.data[0]["count"] if response.data else 0
+            feeders = self.customer_data.get("feeders", {})
+            return feeders.get(feeder_name)
         except Exception as e:
-            logger.error(f"Error retrieving kit request count: {e}", exc_info=True)
-            return 0
+            logger.error(f"Error retrieving feeder info: {e}")
+            return None
 
-    def get_screening_completion_count(self) -> int:
+    def get_analytics(self) -> Dict[str, Any]:
         """
-        Retrieve the total number of completed screenings (test results) for analytics.
+        Get analytics data for dashboard/reporting.
 
         Returns:
-            int: Number of completed screenings
+            Dict with analytics metrics
         """
         try:
-            response = self.supabase_client.table("test_results").select("count", count="exact").execute()
-            return response.data[0]["count"] if response.data else 0
+            total_customers = len(self.customer_data.get("customers", []))
+            total_conversations = sum(len(convs) for convs in self.conversations.values())
+            total_fault_reports = len(self.fault_reports)
+            total_map_applications = len(self.map_applications)
+            
+            # Count billing issues
+            above_cap_count = 0
+            for customer in self.customer_data.get("customers", []):
+                if customer.get("bill_amount", 0) > customer.get("nerc_cap", 0):
+                    above_cap_count += 1
+            
+            return {
+                "total_customers": total_customers,
+                "total_conversations": total_conversations,
+                "total_fault_reports": total_fault_reports,
+                "total_map_applications": total_map_applications,
+                "customers_above_cap": above_cap_count,
+                "unmetered_customers": total_customers  # All are unmetered in sample data
+            }
         except Exception as e:
-            logger.error(f"Error retrieving screening completion count: {e}", exc_info=True)
-            return 0
+            logger.error(f"Error getting analytics: {e}")
+            return {}
 
     def close(self):
-        """Clean up Supabase client (no-op as supabase-py manages connections)."""
-        logger.info("Supabase client does not require explicit cleanup")
-
-    def __del__(self):
-        """Clean up on object deletion (no-op for Supabase client)."""
-        pass
+        """Save all data and cleanup."""
+        try:
+            self._save_json(self.conversations_file, self.conversations)
+            self._save_json(self.fault_reports_file, self.fault_reports)
+            self._save_json(self.map_applications_file, self.map_applications)
+            logger.info("DataManager closed and all data saved")
+        except Exception as e:
+            logger.error(f"Error closing DataManager: {e}")
