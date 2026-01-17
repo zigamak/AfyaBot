@@ -6957,3 +6957,69 @@ NameError: name 'datetime' is not defined. Did you forget to import 'datetime'
 2026-01-17 13:56:21,036 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
  * Running on http://127.0.0.1:8000
 2026-01-17 13:56:21,036 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2026-01-17 16:22:10,068 - __main__ - ERROR - Environment check failed. Please fix the issues above.
+2026-01-17 16:22:18,082 - __main__ - INFO - Starting Wallpaper.ng AI Assistant server...
+2026-01-17 16:22:20,050 - __main__ - ERROR - Import error: cannot import name 'SessionManager' from 'utils.session_manager' (C:\Users\zigam\Documents\Coding\Pentanative\BEDC\utils\session_manager.py)
+2026-01-17 16:24:36,992 - __main__ - INFO - Starting Wallpaper.ng AI Assistant server...
+2026-01-17 16:24:38,499 - utils.session_manager - INFO - SessionManager initialized. Timeout: 3600s
+2026-01-17 16:24:38,499 - utils.data_manager - INFO - DataManager initialized with JSON file storage
+2026-01-17 16:24:38,499 - utils.data_manager - INFO - Loaded 20 customer records
+2026-01-17 16:24:38,499 - services.whatsapp_service - DEBUG - WhatsAppService initialized with phone_number_id: 846412388549528
+2026-01-17 16:24:38,499 - app - INFO - Core services initialized for AfyaBot (Gynecology Medical AI)
+2026-01-17 16:24:39,048 - services.ai_service - INFO - AI Service initialized with LLM support
+2026-01-17 16:24:39,048 - handlers.ai_handler - INFO - AIHandler: LLM-powered AI Service initialized
+2026-01-17 16:24:39,469 - services.ai_service - INFO - AI Service initialized with LLM support
+2026-01-17 16:24:39,469 - handlers.ai_handler - INFO - AIHandler: LLM-powered AI Service initialized
+2026-01-17 16:24:39,469 - message_processor - INFO - MessageProcessor initialized for Gynecology Medical AI (AfyaBot).
+2026-01-17 16:24:39,469 - app - INFO - AfyaBot handlers and message processor initialized.
+2026-01-17 16:24:39,469 - utils.session_manager - INFO - SessionManager initialized. Timeout: 3600s
+2026-01-17 16:24:39,469 - utils.data_manager - INFO - DataManager initialized with JSON file storage
+2026-01-17 16:24:39,469 - utils.data_manager - INFO - Loaded 20 customer records
+2026-01-17 16:24:39,469 - services.whatsapp_service - DEBUG - WhatsAppService initialized with phone_number_id: 846412388549528
+2026-01-17 16:24:39,469 - services.payment_service - INFO - PaymentService initialized
+2026-01-17 16:24:39,469 - app - INFO - WebhookHandler initialized with message processor.
+2026-01-17 16:24:39,528 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8000
+2026-01-17 16:24:39,529 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2026-01-17 16:26:11,930 - __main__ - INFO - Starting Wallpaper.ng AI Assistant server...
+2026-01-17 16:26:13,280 - utils.session_manager - INFO - SessionManager initialized. Default timeouts: Unpaid=3000s, Paid=12000s
+2026-01-17 16:26:13,281 - utils.data_manager - INFO - DataManager initialized with JSON file storage
+2026-01-17 16:26:13,281 - utils.data_manager - INFO - Loaded 20 customer records
+2026-01-17 16:26:13,282 - services.whatsapp_service - DEBUG - WhatsAppService initialized with phone_number_id: 846412388549528
+2026-01-17 16:26:13,283 - app - INFO - Core services initialized for AfyaBot (Gynecology Medical AI)
+2026-01-17 16:26:13,734 - services.ai_service - INFO - AI Service initialized with LLM support
+2026-01-17 16:26:13,734 - handlers.ai_handler - INFO - AIHandler: LLM-powered AI Service initialized
+2026-01-17 16:26:14,134 - services.ai_service - INFO - AI Service initialized with LLM support
+2026-01-17 16:26:14,134 - handlers.ai_handler - INFO - AIHandler: LLM-powered AI Service initialized
+2026-01-17 16:26:14,134 - message_processor - INFO - MessageProcessor initialized for Gynecology Medical AI (AfyaBot).
+2026-01-17 16:26:14,134 - app - INFO - AfyaBot handlers and message processor initialized.
+2026-01-17 16:26:14,134 - utils.session_manager - INFO - SessionManager initialized. Default timeouts: Unpaid=3000s, Paid=12000s
+2026-01-17 16:26:14,134 - utils.data_manager - INFO - DataManager initialized with JSON file storage
+2026-01-17 16:26:14,134 - utils.data_manager - INFO - Loaded 20 customer records
+2026-01-17 16:26:14,134 - services.whatsapp_service - DEBUG - WhatsAppService initialized with phone_number_id: 846412388549528
+2026-01-17 16:26:14,134 - services.payment_service - INFO - PaymentService initialized
+2026-01-17 16:26:14,134 - app - INFO - WebhookHandler initialized with message processor.
+2026-01-17 16:26:14,153 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8000
+2026-01-17 16:26:14,153 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2026-01-17 16:26:23,942 - __main__ - INFO - Starting Wallpaper.ng AI Assistant server...
+2026-01-17 16:26:25,425 - utils.session_manager - INFO - SessionManager initialized. Default timeouts: Unpaid=3000s, Paid=12000s
+2026-01-17 16:26:25,425 - utils.data_manager - INFO - DataManager initialized with JSON file storage
+2026-01-17 16:26:25,425 - utils.data_manager - INFO - Loaded 20 customer records
+2026-01-17 16:26:25,425 - services.whatsapp_service - DEBUG - WhatsAppService initialized with phone_number_id: 846412388549528
+2026-01-17 16:26:25,425 - app - INFO - Core services initialized for AfyaBot (Gynecology Medical AI)
+2026-01-17 16:26:25,838 - services.ai_service - INFO - AI Service initialized with LLM support
+2026-01-17 16:26:25,838 - handlers.ai_handler - INFO - AIHandler: LLM-powered AI Service initialized
+2026-01-17 16:26:26,216 - services.ai_service - INFO - AI Service initialized with LLM support
+2026-01-17 16:26:26,216 - handlers.ai_handler - INFO - AIHandler: LLM-powered AI Service initialized
+2026-01-17 16:26:26,216 - message_processor - INFO - MessageProcessor initialized for Gynecology Medical AI (AfyaBot).
+2026-01-17 16:26:26,216 - app - INFO - AfyaBot handlers and message processor initialized.
+2026-01-17 16:26:26,216 - utils.session_manager - INFO - SessionManager initialized. Default timeouts: Unpaid=3000s, Paid=12000s
+2026-01-17 16:26:26,216 - utils.data_manager - INFO - DataManager initialized with JSON file storage
+2026-01-17 16:26:26,216 - utils.data_manager - INFO - Loaded 20 customer records
+2026-01-17 16:26:26,216 - services.whatsapp_service - DEBUG - WhatsAppService initialized with phone_number_id: 846412388549528
+2026-01-17 16:26:26,216 - services.payment_service - INFO - PaymentService initialized
+2026-01-17 16:26:26,216 - app - INFO - WebhookHandler initialized with message processor.
+2026-01-17 16:26:26,244 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8000
+2026-01-17 16:26:26,244 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
