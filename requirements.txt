@@ -24,7 +24,8 @@ typing_extensions==4.12.2
 pandas==2.2.3
 numpy==1.26.4
 SQLAlchemy==2.0.38
-
+# --- Database ---
+psycopg2-binary==2.9.9
 pyarrow==19.0.1
 
 # --- Supabase/Storage ---
