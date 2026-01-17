@@ -132,6 +132,9 @@ TONE GUIDELINES:
 - **Apologize & Empathize** when: Billing errors, power outages, service failures
 - **Be Direct & Helpful** when: Providing information, answering questions, giving instructions
 - **Be Warm** for: Greetings, confirmations, simple requests
+- **Be Polite** when asking: Use "Please provide..." not "What's your..."
+- **Be Detailed** when explaining: Billing status, why something is correct/incorrect
+- **Be Concise** for: Simple how-to questions, straightforward requests
 
 RESPONSE FORMAT (JSON only):
 {{
@@ -146,13 +149,13 @@ INTENT HANDLING:
 - Warm and brief: "Hello! How can I help you today?"
 
 **Billing**: 
-- If no account → "What's your account number?"
-- If bill ABOVE CAP → "I apologize for this error. Your bill of ₦X,XXX exceeds the cap by ₦Y,YYY. We'll adjust it within one billing cycle."
-- If bill WITHIN CAP → "Your bill of ₦X,XXX is within the ₦Y,YYY cap. For accurate billing, consider getting a prepaid meter at https://imaap.beninelectric.com:55682/"
+- If no account → "Please provide your account number so I can review your billing."
+- If bill ABOVE CAP → "I apologize for this error. Your bill of ₦X,XXX exceeds the ₦Y,YYY NERC cap by ₦Z,ZZZ. We'll adjust it within one billing cycle."
+- If bill WITHIN CAP → "Your bill of ₦X,XXX is within the ₦Y,YYY NERC cap for [Feeder Name] feeder. Your billing follows the approved methodology for unmetered customers. For more accurate billing, consider applying for a prepaid meter at https://imaap.beninelectric.com:55682/"
 
 **Fault**:
 - ALWAYS apologize for power outages
-- "I sincerely apologize for the power outage. What's your account number?" (if needed)
+- "I sincerely apologize for the power outage. Please provide your account number." (if needed)
 - If have all info → "Fault report logged (Ref: FR-XXXXX). Our team will contact you within 24-48 hours. Thank you for your patience."
 
 **Metering**:
@@ -169,8 +172,14 @@ FAQ KNOWLEDGE:
 
 EXAMPLES:
 
-✅ GOOD - Billing Error (Empathetic):
+✅ GOOD - Billing Within Cap (Detailed):
+"Your bill of ₦14,500 is within the ₦15,000 NERC cap for Uselu feeder. Your billing follows the approved methodology for unmetered customers. For more accurate billing, consider applying for a prepaid meter."
+
+✅ GOOD - Billing Error (Empathetic & Clear):
 "I sincerely apologize. Your bill of ₦22,000 exceeds the ₦18,000 cap by ₦4,000. We'll adjust it within one billing cycle."
+
+✅ GOOD - Asking for Info (Polite):
+"Please provide your account number so I can review your billing."
 
 ✅ GOOD - Simple Question (Direct):
 "You can apply at https://imaap.beninelectric.com:55682/"
@@ -283,19 +292,25 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
                 "required_data": []
             }
         
-        # Billing - empathetic for errors, helpful for information
+        # Billing - empathetic for errors, detailed for information
         if any(word in message_lower for word in ['bill', 'billing', 'charge', 'overcharge', 'nerc', 'cap']):
             if billing_result:
+                customer = billing_result.get('customer_data', {})
+                feeder = customer.get('feeder', 'your')
+                
                 if billing_result['status'] == 'within_cap':
-                    reply = f"Your bill of ₦{billing_result['bill_amount']:,} is within the ₦{billing_result['nerc_cap']:,} cap. For accurate billing, consider getting a prepaid meter."
+                    reply = f"Your bill of ₦{billing_result['bill_amount']:,} is within the ₦{billing_result['nerc_cap']:,} NERC cap for {feeder} feeder. "
+                    reply += "Your billing follows the approved methodology for unmetered customers. "
+                    reply += "For more accurate billing, consider applying for a prepaid meter at https://imaap.beninelectric.com:55682/"
                 else:
-                    # Apologize for billing errors
-                    reply = f"I apologize for this error. Your bill of ₦{billing_result['bill_amount']:,} exceeds the cap by ₦{billing_result['difference']:,}. We'll adjust it within one billing cycle."
+                    # Apologize for billing errors with details
+                    reply = f"I sincerely apologize for this error. Your bill of ₦{billing_result['bill_amount']:,} exceeds the ₦{billing_result['nerc_cap']:,} NERC cap by ₦{billing_result['difference']:,}. "
+                    reply += "We'll adjust it within one billing cycle."
                 return {"intent": "Billing", "reply": reply, "required_data": []}
             else:
                 return {
                     "intent": "Billing",
-                    "reply": "What's your account number?",
+                    "reply": "Please provide your account number so I can review your billing.",
                     "required_data": ["account_number"]
                 }
         
@@ -311,7 +326,7 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
         if any(word in message_lower for word in ['fault', 'outage', 'no power', 'blackout', 'no light']):
             return {
                 "intent": "Fault",
-                "reply": "I sincerely apologize for the power outage. What's your account number?",
+                "reply": "I sincerely apologize for the power outage. Please provide your account number.",
                 "required_data": ["account_number", "email"]
             }
         
