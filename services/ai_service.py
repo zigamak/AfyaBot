@@ -18,12 +18,12 @@ except ImportError:
 class AIService:
     """
     Enhanced AI-powered conversational service for BEDC WhatsApp Support Bot
-    using LLM for intent detection and response generation.
+    using LLM for intent detection and response generation with PostgreSQL.
     """
 
-    def __init__(self, config, data_manager):
-        """Initialize AI Service with LLM capabilities."""
-        self.data_manager = data_manager
+    def __init__(self, config, db_manager):
+        """Initialize AI Service with LLM capabilities and database manager."""
+        self.db_manager = db_manager
         
         # Get OpenAI API key
         try:
@@ -255,10 +255,10 @@ BALANCE: Be human, caring, and natural. Avoid sounding like a bot."""
                 context_parts.append(state_info)
             
             if customer_data:
-                context_parts.append(f"CUSTOMER DATA: {json.dumps(customer_data)}")
+                context_parts.append(f"CUSTOMER DATA: {json.dumps(customer_data, default=str)}")
             
             if billing_result:
-                context_parts.append(f"BILLING STATUS: {json.dumps(billing_result)}")
+                context_parts.append(f"BILLING STATUS: {json.dumps(billing_result, default=str)}")
             
             context = "\n".join(context_parts) if context_parts else "No additional context."
             
@@ -398,7 +398,7 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
                 # Proceed with logging the fault
                 fault_data = session_state.get("fault_data", {})
                 
-                success = self.data_manager.save_fault_report(
+                success = self.db_manager.save_fault_report(
                     fault_data["phone_number"],
                     fault_data["account_number"],
                     fault_data["email"],
@@ -445,10 +445,10 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
         customer_email = None
         
         if account_number:
-            customer_data = self.data_manager.get_customer_by_account(account_number)
+            customer_data = self.db_manager.get_customer_by_account(account_number)
             if customer_data:
-                billing_result = self.data_manager.check_billing_status(account_number)
-                customer_email = customer_data.get("email")  # Get email from database
+                billing_result = self.db_manager.check_billing_status(account_number)
+                customer_email = customer_data.get("email")
                 logger.info(f"Found customer email in database: {customer_email}")
         
         # Use database email if user hasn't provided one

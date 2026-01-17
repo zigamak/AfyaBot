@@ -10,10 +10,10 @@ logger = logging.getLogger(__name__)
 class AIHandler(BaseHandler):
     """Handles AI-powered conversational assistance for BEDC Support Bot using LLM."""
 
-    def __init__(self, config, session_manager, data_manager, whatsapp_service):
-        super().__init__(config, session_manager, data_manager, whatsapp_service)
+    def __init__(self, config, session_manager, db_manager, whatsapp_service):
+        super().__init__(config, session_manager, db_manager, whatsapp_service)
         
-        self.ai_service = AIService(config, data_manager)
+        self.ai_service = AIService(config, db_manager)
         self.ai_enabled = self.ai_service.ai_enabled
         
         # BEDC branding
@@ -125,13 +125,15 @@ I can help with:
             
             state["conversation_history"] = conversation_history
             
-            # Save to data manager
-            self.data_manager.save_conversation(
+            # Save to database
+            account_number = state.get("account_number")
+            self.db_manager.save_conversation(
                 phone_number,
                 session_id,
                 user_message,
                 ai_response,
-                intent
+                intent,
+                account_number
             )
             
             self.session_manager.update_session_state(session_id, state)
