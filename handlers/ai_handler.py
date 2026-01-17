@@ -87,14 +87,16 @@ How can I help?"""
             # Get conversation history
             conversation_history = state.get("conversation_history", [])
             
-            # Get current session state for context
+            # Get current session state for context - INCLUDE ALL FAULT-RELATED STATE
             session_state = {
                 "fault_data": state.get("fault_data", {}),
                 "account_number": state.get("account_number"),
-                "billing_checked": state.get("billing_checked", False)
+                "billing_checked": state.get("billing_checked", False),
+                "awaiting_fault_confirmation": state.get("awaiting_fault_confirmation", False)
             }
             
             logger.info(f"Calling AI service with LLM for: {user_message[:100]}")
+            logger.info(f"Session state: awaiting_confirmation={session_state.get('awaiting_fault_confirmation', False)}")
             
             # Generate AI response using LLM
             ai_response, intent, state_update = self.ai_service.generate_response(
@@ -110,6 +112,7 @@ How can I help?"""
             # Update state with any changes from AI service
             for key, value in state_update.items():
                 state[key] = value
+                logger.info(f"Updated state[{key}] = {value}")
             
             # Update conversation history
             conversation_entry = {
@@ -126,15 +129,17 @@ How can I help?"""
             
             state["conversation_history"] = conversation_history
             
-            # Save to data manager
-            self.data_manager.save_conversation(
-                phone_number,
-                session_id,
-                user_message,
-                ai_response,
-                intent
-            )
+            # Save to data manager (only if not awaiting confirmation)
+            if not state.get("awaiting_fault_confirmation", False):
+                self.data_manager.save_conversation(
+                    phone_number,
+                    session_id,
+                    user_message,
+                    ai_response,
+                    intent
+                )
             
+            # Update session state
             self.session_manager.update_session_state(session_id, state)
             
             return self.whatsapp_service.create_text_message(session_id, ai_response)
