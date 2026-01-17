@@ -64,15 +64,15 @@ class AIHandler(BaseHandler):
             return self._process_user_message(state, session_id, user_message)
         
         # Otherwise send greeting
-        greeting_message = f"""Hello {user_name}! Welcome to BEDC Customer Support. 🌟
+        greeting_message = f"""Hi {user_name}! I'm BEDC Support Bot. 🌟
 
-I'm here to help you with:
-📋 Billing inquiries and complaints
-⚡ Meter applications (MAP enrollment)
-🔧 Fault reporting and power outages
-❓ General questions about our services
+I help with:
+📋 Billing issues
+⚡ Meter applications  
+🔧 Fault reports
+❓ FAQs (type 'FAQ')
 
-How may I assist you today?"""
+How can I help?"""
         
         return self.whatsapp_service.create_text_message(session_id, greeting_message)
 
@@ -145,4 +145,4 @@ How may I assist you today?"""
                 "I'm having trouble processing your request right now. "
                 "Please try again or contact our office at Ring Road, Benin City."
             )
-            return self.whatsapp_service.create_text_message(session_id, error_message) 
+            return self.whatsapp_service.create_text_message(session_id, error_message)

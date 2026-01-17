@@ -3,6 +3,7 @@
     {
       "account_number": "100001",
       "customer_name": "Adebayo Tunde",
+      "email": "adebayo.tunde@gmail.com",
       "feeder": "Uselu",
       "bill_amount": 14500,
       "nerc_cap": 15000,
@@ -11,6 +12,7 @@
     {
       "account_number": "100002",
       "customer_name": "Osagie Blessing",
+      "email": "osagie.blessing@yahoo.com",
       "feeder": "Ugbowo",
       "bill_amount": 18200,
       "nerc_cap": 15000,
@@ -19,14 +21,16 @@
     {
       "account_number": "100003",
       "customer_name": "Ibrahim Musa",
+      "email": "ibrahim.musa@gmail.com",
       "feeder": "Aduwawa",
       "bill_amount": 12000,
       "nerc_cap": 13500,
-      "meter_status": "Unmetered"
+      "meter_status": "Metered"
     },
     {
       "account_number": "100004",
       "customer_name": "Efe Johnson",
+      "email": "efe.johnson@hotmail.com",
       "feeder": "Sapele Road",
       "bill_amount": 20500,
       "nerc_cap": 17000,
@@ -35,14 +39,16 @@
     {
       "account_number": "100005",
       "customer_name": "Okafor Chinedu",
+      "email": "okafor.chinedu@gmail.com",
       "feeder": "Uselu",
       "bill_amount": 15000,
       "nerc_cap": 15000,
-      "meter_status": "Unmetered"
+      "meter_status": "Metered"
     },
     {
       "account_number": "100006",
       "customer_name": "Lawal Sadiq",
+      "email": "lawal.sadiq@yahoo.com",
       "feeder": "Ikpoba Hill",
       "bill_amount": 9800,
       "nerc_cap": 12000,
@@ -51,6 +57,7 @@
     {
       "account_number": "100007",
       "customer_name": "Akinwale Funke",
+      "email": "akinwale.funke@gmail.com",
       "feeder": "GRA",
       "bill_amount": 22000,
       "nerc_cap": 18000,
@@ -59,14 +66,16 @@
     {
       "account_number": "100008",
       "customer_name": "Obasuyi Kelvin",
+      "email": "obasuyi.kelvin@gmail.com",
       "feeder": "Ring Road",
       "bill_amount": 13200,
       "nerc_cap": 14000,
-      "meter_status": "Unmetered"
+      "meter_status": "Metered"
     },
     {
       "account_number": "100009",
       "customer_name": "Mohammed Zainab",
+      "email": "zainab.mohammed@yahoo.com",
       "feeder": "Aduwawa",
       "bill_amount": 16500,
       "nerc_cap": 13500,
@@ -75,14 +84,16 @@
     {
       "account_number": "100010",
       "customer_name": "Ojo Samuel",
+      "email": "ojo.samuel@gmail.com",
       "feeder": "Ugbowo",
       "bill_amount": 14900,
       "nerc_cap": 15000,
-      "meter_status": "Unmetered"
+      "meter_status": "Metered"
     },
     {
       "account_number": "100011",
       "customer_name": "Ighodaro Peace",
+      "email": "ighodaro.peace@gmail.com",
       "feeder": "Uselu",
       "bill_amount": 19000,
       "nerc_cap": 15000,
@@ -91,22 +102,25 @@
     {
       "account_number": "100012",
       "customer_name": "Bello Rukayat",
+      "email": "bello.rukayat@yahoo.com",
       "feeder": "Ikpoba Hill",
       "bill_amount": 11500,
       "nerc_cap": 12000,
-      "meter_status": "Unmetered"
+      "meter_status": "Metered"
     },
     {
       "account_number": "100013",
       "customer_name": "Omoregie Patrick",
+      "email": "omoregie.patrick@gmail.com",
       "feeder": "GRA",
       "bill_amount": 17500,
       "nerc_cap": 18000,
-      "meter_status": "Unmetered"
+      "meter_status": "Metered"
     },
     {
       "account_number": "100014",
       "customer_name": "Adebola Kemi",
+      "email": "adebola.kemi@hotmail.com",
       "feeder": "Ring Road",
       "bill_amount": 14000,
       "nerc_cap": 14000,
@@ -115,6 +129,7 @@
     {
       "account_number": "100015",
       "customer_name": "Danjuma Peter",
+      "email": "danjuma.peter@gmail.com",
       "feeder": "Sapele Road",
       "bill_amount": 21000,
       "nerc_cap": 17000,
@@ -123,22 +138,25 @@
     {
       "account_number": "100016",
       "customer_name": "Afolayan Segun",
+      "email": "afolayan.segun@yahoo.com",
       "feeder": "Ugbowo",
       "bill_amount": 15800,
       "nerc_cap": 15000,
-      "meter_status": "Unmetered"
+      "meter_status": "Metered"
     },
     {
       "account_number": "100017",
       "customer_name": "Ibitoye Tolu",
+      "email": "ibitoye.tolu@gmail.com",
       "feeder": "Uselu",
       "bill_amount": 10200,
       "nerc_cap": 15000,
-      "meter_status": "Unmetered"
+      "meter_status": "Metered"
     },
     {
       "account_number": "100018",
       "customer_name": "Okoro Ifunanya",
+      "email": "okoro.ifunanya@gmail.com",
       "feeder": "Aduwawa",
       "bill_amount": 14300,
       "nerc_cap": 13500,
@@ -147,14 +165,16 @@
     {
       "account_number": "100019",
       "customer_name": "Ekhator Mary",
+      "email": "ekhator.mary@yahoo.com",
       "feeder": "Ikpoba Hill",
       "bill_amount": 12000,
       "nerc_cap": 12000,
-      "meter_status": "Unmetered"
+      "meter_status": "Metered"
     },
     {
       "account_number": "100020",
       "customer_name": "Salami Ridwan",
+      "email": "salami.ridwan@gmail.com",
       "feeder": "GRA",
       "bill_amount": 23500,
       "nerc_cap": 18000,
