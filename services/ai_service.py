@@ -123,51 +123,71 @@ class AIService:
         return f"""You are an AI customer support assistant for Benin Electricity Distribution Company (BEDC).
 
 CRITICAL RULES:
-1. BE CONCISE - Keep responses short (1-3 sentences maximum for most queries)
-2. CHECK CONTEXT - If user already provided information (account number, email), DON'T ask again
+1. BE CONCISE but APPROPRIATE - Match tone to situation
+2. CHECK CONTEXT - If user already provided information, DON'T ask again
 3. ONE QUESTION AT A TIME - If you need info, ask for ONE thing only
-4. NO REPETITION - If you already said something in this conversation, don't say it again
+4. NO REPETITION - Don't repeat what you already said
+
+TONE GUIDELINES:
+- **Apologize & Empathize** when: Billing errors, power outages, service failures
+- **Be Direct & Helpful** when: Providing information, answering questions, giving instructions
+- **Be Warm** for: Greetings, confirmations, simple requests
 
 RESPONSE FORMAT (JSON only):
 {{
   "intent": "<Greeting | Billing | Metering | Fault | FAQ>",
-  "reply": "<SHORT, direct response>",
+  "reply": "<Appropriate tone, concise response>",
   "required_data": ["<what's still missing>"]
 }}
 
 INTENT HANDLING:
 
-**Greeting**: Just say hi and ask how you can help (1 sentence)
+**Greeting**: 
+- Warm and brief: "Hello! How can I help you today?"
 
 **Billing**: 
-- If no account number AND not in context → Ask: "What's your account number?"
-- If have account number → Give billing info directly, be brief
-- If bill is ABOVE CAP → "Your bill is ₦X,XXX over the cap. We'll adjust it within one billing cycle."
-- If WITHIN CAP → "Your bill is within limits. Consider getting a prepaid meter."
+- If no account → "What's your account number?"
+- If bill ABOVE CAP → "I apologize for this error. Your bill of ₦X,XXX exceeds the cap by ₦Y,YYY. We'll adjust it within one billing cycle."
+- If bill WITHIN CAP → "Your bill of ₦X,XXX is within the ₦Y,YYY cap. For accurate billing, consider getting a prepaid meter at https://imaap.beninelectric.com:55682/"
 
 **Fault**:
-- If have account AND email → Confirm report logged
-- If have account, need email → Check context - if email_from_database is true, DON'T ask for email
-- If need account → "What's your account number?"
-- DON'T explain the whole process, just ask for missing info
+- ALWAYS apologize for power outages
+- "I sincerely apologize for the power outage. What's your account number?" (if needed)
+- If have all info → "Fault report logged (Ref: FR-XXXXX). Our team will contact you within 24-48 hours. Thank you for your patience."
 
 **Metering**:
-- Be brief: "Apply at https://imaap.beninelectric.com:55682/"
-- If they ask how → Give 1-2 steps max
+- Be helpful and direct: "You can apply for a prepaid meter at https://imaap.beninelectric.com:55682/"
+- If they need steps → Give 2-3 simple steps
+- If new customer → "You'll need to visit our office at Ring Road, Benin City to create an account first."
 
-**FAQ**: Answer from knowledge base in 1-2 sentences
+**FAQ**: 
+- Answer directly from knowledge base in 1-3 sentences
+- Be helpful, not overly formal
 
 FAQ KNOWLEDGE:
 {self.faq_knowledge}
 
-EXAMPLES OF GOOD RESPONSES:
-❌ BAD: "I understand your concern and sincerely apologize for the inconvenience. To assist you properly with your billing inquiry, I'll need to access your account information. Could you please provide me with your 6-digit account number so I can review your billing status?"
-✅ GOOD: "What's your account number?"
+EXAMPLES:
 
-❌ BAD: "Thank you for providing that information. Now, to complete your fault report, I'll also need your email address."
-✅ GOOD: "Thanks! What's your email?"
+✅ GOOD - Billing Error (Empathetic):
+"I sincerely apologize. Your bill of ₦22,000 exceeds the ₦18,000 cap by ₦4,000. We'll adjust it within one billing cycle."
 
-REMEMBER: Short, direct, helpful. No fluff."""
+✅ GOOD - Simple Question (Direct):
+"You can apply at https://imaap.beninelectric.com:55682/"
+
+✅ GOOD - Fault Report (Empathetic):
+"I apologize for the power outage. What's your account number?"
+
+✅ GOOD - Greeting (Warm):
+"Hello! How can I help you today?"
+
+❌ BAD - Over-apologizing:
+"I understand your concern and sincerely apologize for the inconvenience. I'm terribly sorry about this situation..."
+
+❌ BAD - Too cold for serious issue:
+"Bill exceeds cap. Will fix."
+
+BALANCE: Be human and caring when users have problems. Be efficient and helpful when they need information."""
 
     def call_llm(self, user_message: str, conversation_state: Dict = None,
                  customer_data: Dict = None, billing_result: Dict = None,
@@ -255,7 +275,7 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
         """Fallback pattern-matching based response when LLM is unavailable."""
         message_lower = user_message.lower().strip()
         
-        # Simple pattern matching
+        # Greeting - warm and welcoming
         if any(word in message_lower for word in ['hello', 'hi', 'hey', 'good morning', 'good afternoon']):
             return {
                 "intent": "Greeting",
@@ -263,13 +283,14 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
                 "required_data": []
             }
         
+        # Billing - empathetic for errors, helpful for information
         if any(word in message_lower for word in ['bill', 'billing', 'charge', 'overcharge', 'nerc', 'cap']):
             if billing_result:
-                # We have billing data
                 if billing_result['status'] == 'within_cap':
-                    reply = f"Your bill is ₦{billing_result['bill_amount']:,} (within the ₦{billing_result['nerc_cap']:,} cap)."
+                    reply = f"Your bill of ₦{billing_result['bill_amount']:,} is within the ₦{billing_result['nerc_cap']:,} cap. For accurate billing, consider getting a prepaid meter."
                 else:
-                    reply = f"Your bill is ₦{billing_result['difference']:,} over the cap. We'll adjust it within one billing cycle."
+                    # Apologize for billing errors
+                    reply = f"I apologize for this error. Your bill of ₦{billing_result['bill_amount']:,} exceeds the cap by ₦{billing_result['difference']:,}. We'll adjust it within one billing cycle."
                 return {"intent": "Billing", "reply": reply, "required_data": []}
             else:
                 return {
@@ -278,20 +299,23 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
                     "required_data": ["account_number"]
                 }
         
+        # Metering - direct and helpful
         if any(word in message_lower for word in ['meter', 'prepaid', 'map', 'apply']):
             return {
                 "intent": "Metering",
-                "reply": "Apply for a prepaid meter at https://imaap.beninelectric.com:55682/",
+                "reply": "You can apply for a prepaid meter at https://imaap.beninelectric.com:55682/",
                 "required_data": []
             }
         
+        # Fault - always apologize for service issues
         if any(word in message_lower for word in ['fault', 'outage', 'no power', 'blackout', 'no light']):
             return {
                 "intent": "Fault",
-                "reply": "To log your fault report, I need your account number and email.",
+                "reply": "I sincerely apologize for the power outage. What's your account number?",
                 "required_data": ["account_number", "email"]
             }
         
+        # Default - helpful
         return {
             "intent": "FAQ",
             "reply": "I can help with billing, meters, or fault reports. What do you need?",
@@ -415,13 +439,13 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
                 )
                 
                 if success:
-                    reply = "Fault Report Logged Successfully\n\n"
+                    reply = "Fault report logged successfully.\n\n"
                     reply += f"Reference: FR-{fault_data['account_number']}-{datetime.now().strftime('%Y%m%d')}\n"
                     reply += f"Email: {fault_data['email']}\n\n"
-                    reply += "Technical team will contact you within 24-48 hours."
+                    reply += "Our technical team will contact you within 24-48 hours. Thank you for your patience."
                     state_update["fault_data"] = {}
                 else:
-                    reply = "Error logging fault report. Please try again."
+                    reply = "I apologize, but there was an error logging your fault report. Please try again or contact our office."
             else:
                 state_update["fault_data"] = fault_data
         
