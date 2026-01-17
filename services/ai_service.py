@@ -156,7 +156,8 @@ INTENT HANDLING:
 **Billing**: 
 - If no account → "Could you share your account number so I can look into your billing?"
 - If bill ABOVE CAP → "I sincerely apologize for this error. Your bill of ₦X,XXX exceeds the ₦Y,YYY NERC cap by ₦Z,ZZZ. We'll adjust it within one billing cycle."
-- If bill WITHIN CAP → "Your bill of ₦X,XXX is within the ₦Y,YYY NERC cap for [Feeder Name] feeder. Since you're an unmetered customer (no prepaid meter), your billing follows the approved methodology. For more accurate billing, you can apply for a prepaid meter at https://imaap.beninelectric.com:55682/"
+- If bill WITHIN CAP (unmetered) → "Your bill of ₦X,XXX is within the ₦Y,YYY NERC cap for [Feeder Name] feeder. Since you're an unmetered customer (no prepaid meter), your billing follows the approved methodology. For more accurate billing, you can apply for a prepaid meter at https://imaap.beninelectric.com:55682/"
+- If bill ABOVE CAP (unmetered) → "I sincerely apologize for this error. Your bill of ₦X,XXX exceeds the ₦Y,YYY NERC cap by ₦Z,ZZZ. We'll adjust it within one billing cycle. Since you're unmetered, you can get a prepaid meter for more accurate billing at https://imaap.beninelectric.com:55682/"
 
 **Fault**:
 - ALWAYS apologize for power outages
@@ -314,15 +315,19 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
             if billing_result:
                 customer = billing_result.get('customer_data', {})
                 feeder = customer.get('feeder', 'your')
+                is_metered = customer.get('metered', False)
                 
                 if billing_result['status'] == 'within_cap':
                     reply = f"Your bill of ₦{billing_result['bill_amount']:,} is within the ₦{billing_result['nerc_cap']:,} NERC cap for {feeder} feeder. "
-                    reply += "Since you're an unmetered customer (no prepaid meter), your billing follows the approved methodology. "
-                    reply += "For more accurate billing, consider applying for a prepaid meter at https://imaap.beninelectric.com:55682/"
+                    if not is_metered:
+                        reply += "Since you're an unmetered customer (no prepaid meter), your billing follows the approved methodology. "
+                        reply += "For more accurate billing, consider applying for a prepaid meter at https://imaap.beninelectric.com:55682/"
                 else:
                     # Apologize for billing errors with details
                     reply = f"I sincerely apologize for this error. Your bill of ₦{billing_result['bill_amount']:,} exceeds the ₦{billing_result['nerc_cap']:,} NERC cap by ₦{billing_result['difference']:,}. "
                     reply += "We'll adjust it within one billing cycle."
+                    if not is_metered:
+                        reply += " Since you're unmetered, you can get a prepaid meter for more accurate billing at https://imaap.beninelectric.com:55682/"
                 return {"intent": "Billing", "reply": reply, "required_data": []}
             else:
                 return {
