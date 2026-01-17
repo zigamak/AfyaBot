@@ -127,6 +127,7 @@ CRITICAL RULES:
 2. CHECK CONTEXT - If user already provided information, DON'T ask again
 3. ONE QUESTION AT A TIME - If you need info, ask for ONE thing only
 4. NO REPETITION - Don't repeat what you already said
+5. CONFIRM ACCOUNT NUMBER - Always verify account number exists in database before logging faults
 
 TONE GUIDELINES:
 - **Apologize & Empathize** when: Billing errors, power outages, service failures
@@ -140,7 +141,8 @@ RESPONSE FORMAT (JSON only):
 {{
   "intent": "<Greeting | Billing | Metering | Fault | FAQ>",
   "reply": "<Appropriate tone, concise response>",
-  "required_data": ["<what's still missing>"]
+  "required_data": ["<what's still missing>"],
+  "account_verified": <true/false>
 }}
 
 INTENT HANDLING:
@@ -155,8 +157,10 @@ INTENT HANDLING:
 
 **Fault**:
 - ALWAYS apologize for power outages
-- "I sincerely apologize for the power outage. Please provide your account number." (if needed)
-- If have all info → "Fault report logged (Ref: FR-XXXXX). Our team will contact you within 24-48 hours. Thank you for your patience."
+- If account not in database → "I need to verify your account. Please provide your account number."
+- If account found → Confirm details: "I'll log this fault for account {account_number} ({customer_name}, {feeder} feeder). Is this correct?"
+- Wait for confirmation before logging
+- After confirmation → "Fault report logged (Ref: FR-XXXXX). Our team will contact you within 24-48 hours. Thank you for your patience."
 
 **Metering**:
 - Be helpful and direct: "You can apply for a prepaid meter at https://imaap.beninelectric.com:55682/"
@@ -172,29 +176,14 @@ FAQ KNOWLEDGE:
 
 EXAMPLES:
 
+✅ GOOD - Fault Confirmation:
+"I'll log this fault for account 101234 (John Doe, Uselu feeder). Is this correct?"
+
+✅ GOOD - Account Not Found:
+"I couldn't find that account number in our system. Please verify and provide the correct account number."
+
 ✅ GOOD - Billing Within Cap (Detailed):
 "Your bill of ₦14,500 is within the ₦15,000 NERC cap for Uselu feeder. Your billing follows the approved methodology for unmetered customers. For more accurate billing, consider applying for a prepaid meter."
-
-✅ GOOD - Billing Error (Empathetic & Clear):
-"I sincerely apologize. Your bill of ₦22,000 exceeds the ₦18,000 cap by ₦4,000. We'll adjust it within one billing cycle."
-
-✅ GOOD - Asking for Info (Polite):
-"Please provide your account number so I can review your billing."
-
-✅ GOOD - Simple Question (Direct):
-"You can apply at https://imaap.beninelectric.com:55682/"
-
-✅ GOOD - Fault Report (Empathetic):
-"I apologize for the power outage. What's your account number?"
-
-✅ GOOD - Greeting (Warm):
-"Hello! How can I help you today?"
-
-❌ BAD - Over-apologizing:
-"I understand your concern and sincerely apologize for the inconvenience. I'm terribly sorry about this situation..."
-
-❌ BAD - Too cold for serious issue:
-"Bill exceeds cap. Will fix."
 
 BALANCE: Be human and caring when users have problems. Be efficient and helpful when they need information."""
 
@@ -205,7 +194,7 @@ BALANCE: Be human and caring when users have problems. Be efficient and helpful 
         Call the LLM to process user message and return structured response.
         
         Returns:
-            Dict with keys: intent, reply, required_data
+            Dict with keys: intent, reply, required_data, account_verified
         """
         if not self.ai_enabled or not self.client:
             # Fallback to pattern matching
@@ -234,10 +223,12 @@ BALANCE: Be human and caring when users have problems. Be efficient and helpful 
                     state_info += f"- Email: Already provided\n"
                 if conversation_state.get("phone_number"):
                     state_info += f"- Phone: {conversation_state['phone_number']}\n"
+                if conversation_state.get("awaiting_confirmation"):
+                    state_info += f"- Status: AWAITING USER CONFIRMATION\n"
                 context_parts.append(state_info)
             
             if customer_data:
-                context_parts.append(f"CUSTOMER DATA: {json.dumps(customer_data)}")
+                context_parts.append(f"CUSTOMER DATA (VERIFIED): {json.dumps(customer_data)}")
             
             if billing_result:
                 context_parts.append(f"BILLING STATUS: {json.dumps(billing_result)}")
@@ -249,7 +240,7 @@ BALANCE: Be human and caring when users have problems. Be efficient and helpful 
 
 {context}
 
-Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
+Remember: Be BRIEF. Check context before asking for info. ALWAYS verify account before logging faults. Return JSON only."""
             
             # Call OpenAI API
             response = self.client.chat.completions.create(
@@ -272,6 +263,9 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
             if "required_data" not in result:
                 result["required_data"] = []
             
+            if "account_verified" not in result:
+                result["account_verified"] = bool(customer_data)
+            
             logger.info(f"LLM detected intent: {result['intent']}")
             return result
             
@@ -289,7 +283,8 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
             return {
                 "intent": "Greeting",
                 "reply": "Hello! How can I help you today?",
-                "required_data": []
+                "required_data": [],
+                "account_verified": False
             }
         
         # Billing - empathetic for errors, detailed for information
@@ -303,15 +298,15 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
                     reply += "Your billing follows the approved methodology for unmetered customers. "
                     reply += "For more accurate billing, consider applying for a prepaid meter at https://imaap.beninelectric.com:55682/"
                 else:
-                    # Apologize for billing errors with details
                     reply = f"I sincerely apologize for this error. Your bill of ₦{billing_result['bill_amount']:,} exceeds the ₦{billing_result['nerc_cap']:,} NERC cap by ₦{billing_result['difference']:,}. "
                     reply += "We'll adjust it within one billing cycle."
-                return {"intent": "Billing", "reply": reply, "required_data": []}
+                return {"intent": "Billing", "reply": reply, "required_data": [], "account_verified": True}
             else:
                 return {
                     "intent": "Billing",
                     "reply": "Please provide your account number so I can review your billing.",
-                    "required_data": ["account_number"]
+                    "required_data": ["account_number"],
+                    "account_verified": False
                 }
         
         # Metering - direct and helpful
@@ -319,7 +314,8 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
             return {
                 "intent": "Metering",
                 "reply": "You can apply for a prepaid meter at https://imaap.beninelectric.com:55682/",
-                "required_data": []
+                "required_data": [],
+                "account_verified": False
             }
         
         # Fault - always apologize for service issues
@@ -327,14 +323,16 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
             return {
                 "intent": "Fault",
                 "reply": "I sincerely apologize for the power outage. Please provide your account number.",
-                "required_data": ["account_number", "email"]
+                "required_data": ["account_number"],
+                "account_verified": False
             }
         
         # Default - helpful
         return {
             "intent": "FAQ",
             "reply": "I can help with billing, meters, or fault reports. What do you need?",
-            "required_data": []
+            "required_data": [],
+            "account_verified": False
         }
 
     def extract_account_number(self, message: str) -> Optional[str]:
@@ -366,6 +364,47 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
         if session_state is None:
             session_state = {}
         
+        # Check if awaiting confirmation
+        awaiting_confirmation = session_state.get("awaiting_fault_confirmation", False)
+        
+        # Handle confirmation responses
+        if awaiting_confirmation:
+            message_lower = user_message.lower().strip()
+            if message_lower in ['yes', 'y', 'yeah', 'correct', 'ok', 'okay', 'confirm']:
+                # User confirmed - proceed with logging
+                fault_data = session_state.get("fault_data", {})
+                
+                success = self.data_manager.save_fault_report(
+                    fault_data["phone_number"],
+                    fault_data["account_number"],
+                    fault_data["email"],
+                    fault_data.get("fault_description", "Power outage reported")
+                )
+                
+                if success:
+                    reply = "Fault report logged successfully.\n\n"
+                    reply += f"Reference: FR-{fault_data['account_number']}-{datetime.now().strftime('%Y%m%d')}\n"
+                    reply += f"Email: {fault_data['email']}\n\n"
+                    reply += "Our technical team will contact you within 24-48 hours. Thank you for your patience."
+                    state_update = {
+                        "fault_data": {},
+                        "awaiting_fault_confirmation": False
+                    }
+                    return (reply, "Fault", state_update)
+                else:
+                    reply = "I apologize, but there was an error logging your fault report. Please try again or contact our office."
+                    state_update = {"awaiting_fault_confirmation": False}
+                    return (reply, "Fault", state_update)
+            
+            elif message_lower in ['no', 'n', 'nope', 'incorrect', 'wrong']:
+                # User declined - ask for correct account
+                reply = "I apologize for the confusion. Please provide the correct account number."
+                state_update = {
+                    "fault_data": {},
+                    "awaiting_fault_confirmation": False
+                }
+                return (reply, "Fault", state_update)
+        
         # Check if account number already exists in session
         saved_account_number = session_state.get("account_number")
         
@@ -382,13 +421,17 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
         customer_data = None
         billing_result = None
         customer_email = None
+        account_verified = False
         
         if account_number:
             customer_data = self.data_manager.get_customer_by_account(account_number)
             if customer_data:
+                account_verified = True
                 billing_result = self.data_manager.check_billing_status(account_number)
-                customer_email = customer_data.get("email")  # Get email from database
-                logger.info(f"Found customer email in database: {customer_email}")
+                customer_email = customer_data.get("email")
+                logger.info(f"Account {account_number} verified in database")
+            else:
+                logger.warning(f"Account {account_number} NOT found in database")
         
         # Use database email if user hasn't provided one
         if not email and customer_email:
@@ -403,7 +446,8 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
             "has_email": bool(email),
             "email_from_database": bool(customer_email),
             "session_data": session_state,
-            "saved_account_number": saved_account_number
+            "saved_account_number": saved_account_number,
+            "awaiting_confirmation": awaiting_confirmation
         }
         
         if account_number:
@@ -415,7 +459,7 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
             conversation_state,
             customer_data,
             billing_result,
-            conversation_history  # PASS CONVERSATION HISTORY
+            conversation_history
         )
         
         intent = llm_response.get("intent", "unknown")
@@ -425,42 +469,50 @@ Remember: Be BRIEF. Check context before asking for info. Return JSON only."""
         # Handle specific flows based on intent
         state_update = {}
         
-        # Save account number to session if found
-        if account_number:
+        # Save account number to session if found and verified
+        if account_number and account_verified:
             state_update["account_number"] = account_number
-            logger.info(f"Saving account number {account_number} to session")
+            logger.info(f"Saving verified account number {account_number} to session")
         
         if intent == "Fault":
-            # Handle fault reporting flow
+            # Handle fault reporting flow with confirmation
             fault_data = session_state.get("fault_data", {})
             
-            if account_number and account_number not in fault_data:
+            # If account not verified, ask for valid account
+            if account_number and not account_verified:
+                reply = "I couldn't find that account number in our system. Please verify and provide the correct account number."
+                state_update["fault_data"] = {}
+                return (reply, intent, state_update)
+            
+            if account_number and account_verified:
                 fault_data["account_number"] = account_number
-            if email and "email" not in fault_data:
+            if email:
                 fault_data["email"] = email
-            if phone_number and "phone_number" not in fault_data:
+            if phone_number:
                 fault_data["phone_number"] = phone_number
             if not fault_data.get("fault_description"):
                 fault_data["fault_description"] = user_message
             
-            # Check if we have all required data
-            if fault_data.get("account_number") and fault_data.get("email") and fault_data.get("phone_number"):
-                # Save fault report
-                success = self.data_manager.save_fault_report(
-                    fault_data["phone_number"],
-                    fault_data["account_number"],
-                    fault_data["email"],
-                    fault_data.get("fault_description", "Power outage reported")
-                )
+            # Check if we have all required data and account is verified
+            if (fault_data.get("account_number") and 
+                fault_data.get("email") and 
+                fault_data.get("phone_number") and 
+                account_verified):
                 
-                if success:
-                    reply = "Fault report logged successfully.\n\n"
-                    reply += f"Reference: FR-{fault_data['account_number']}-{datetime.now().strftime('%Y%m%d')}\n"
-                    reply += f"Email: {fault_data['email']}\n\n"
-                    reply += "Our technical team will contact you within 24-48 hours. Thank you for your patience."
-                    state_update["fault_data"] = {}
-                else:
-                    reply = "I apologize, but there was an error logging your fault report. Please try again or contact our office."
+                # Ask for confirmation before logging
+                customer_name = customer_data.get("customer_name", "")
+                feeder = customer_data.get("feeder", "")
+                
+                reply = f"I'll log this fault for account {fault_data['account_number']}"
+                if customer_name:
+                    reply += f" ({customer_name}"
+                    if feeder:
+                        reply += f", {feeder} feeder"
+                    reply += ")"
+                reply += ".\n\nIs this correct? (Reply 'yes' to confirm or 'no' to correct)"
+                
+                state_update["fault_data"] = fault_data
+                state_update["awaiting_fault_confirmation"] = True
             else:
                 state_update["fault_data"] = fault_data
         
