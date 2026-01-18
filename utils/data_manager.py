@@ -1,11 +1,20 @@
 import logging
 import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from psycopg2.pool import SimpleConnectionPool
 from typing import Dict, List, Any, Optional
 from datetime import datetime, date
 from contextlib import contextmanager
+
+# Try to import psycopg2 (binary version preferred for cloud platforms)
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    from psycopg2.pool import SimpleConnectionPool
+    PSYCOPG2_AVAILABLE = True
+except ImportError:
+    PSYCOPG2_AVAILABLE = False
+    psycopg2 = None
+    RealDictCursor = None
+    SimpleConnectionPool = None
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +28,14 @@ class DBManager:
         Args:
             config: Configuration object or dictionary with database credentials
         """
+        # Check if psycopg2 is available
+        if not PSYCOPG2_AVAILABLE:
+            logger.error("psycopg2 is not installed. Install it with: pip install psycopg2-binary")
+            raise ImportError(
+                "psycopg2 is required for database operations. "
+                "Install it with: pip install psycopg2-binary"
+            )
+        
         # Get database connection string - try multiple sources
         self.db_url = None
         

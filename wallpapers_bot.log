@@ -7059,3 +7059,27 @@ ValueError: DATABASE_URL not found in config or environment variables
 2026-01-18 00:37:45,075 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
  * Running on http://127.0.0.1:8000
 2026-01-18 00:37:45,075 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2026-01-18 01:10:05,238 - __main__ - ERROR - Environment check failed. Please fix the issues above.
+2026-01-18 01:10:12,130 - __main__ - INFO - Starting Wallpaper.ng AI Assistant server...
+2026-01-18 01:10:14,561 - utils.session_manager - INFO - SessionManager initialized. Default timeouts: Unpaid=3000s, Paid=12000s
+2026-01-18 01:10:14,561 - utils.data_manager - INFO - Using DB_URL from config.DB_URL
+2026-01-18 01:10:16,435 - utils.data_manager - INFO - Database connection pool initialized successfully
+2026-01-18 01:10:16,814 - utils.data_manager - INFO - Database connection test successful
+2026-01-18 01:10:16,992 - services.whatsapp_service - DEBUG - WhatsAppService initialized with phone_number_id: 846412388549528
+2026-01-18 01:10:16,992 - app - INFO - Core services initialized for AfyaBot (Gynecology Medical AI)
+2026-01-18 01:10:17,564 - services.ai_service - INFO - AI Service initialized with LLM support
+2026-01-18 01:10:17,564 - handlers.ai_handler - INFO - AIHandler: LLM-powered AI Service initialized
+2026-01-18 01:10:18,075 - services.ai_service - INFO - AI Service initialized with LLM support
+2026-01-18 01:10:18,075 - handlers.ai_handler - INFO - AIHandler: LLM-powered AI Service initialized
+2026-01-18 01:10:18,075 - message_processor - INFO - MessageProcessor initialized for Gynecology Medical AI (AfyaBot).
+2026-01-18 01:10:18,077 - app - INFO - AfyaBot handlers and message processor initialized.
+2026-01-18 01:10:18,077 - utils.session_manager - INFO - SessionManager initialized. Default timeouts: Unpaid=3000s, Paid=12000s
+2026-01-18 01:10:18,077 - utils.data_manager - INFO - Using DB_URL from config.DB_URL
+2026-01-18 01:10:19,230 - utils.data_manager - INFO - Database connection pool initialized successfully
+2026-01-18 01:10:19,606 - utils.data_manager - INFO - Database connection test successful
+2026-01-18 01:10:19,796 - services.whatsapp_service - DEBUG - WhatsAppService initialized with phone_number_id: 846412388549528
+2026-01-18 01:10:19,797 - services.payment_service - INFO - PaymentService initialized
+2026-01-18 01:10:19,797 - app - INFO - WebhookHandler initialized with message processor.
+2026-01-18 01:10:19,822 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8000
+2026-01-18 01:10:19,822 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
