@@ -75,7 +75,7 @@ I can help with:
         return self.whatsapp_service.create_text_message(session_id, greeting_message)
 
     def _process_user_message(self, state: Dict, session_id: str, user_message: str) -> Dict:
-        """Process user message using LLM-powered AI service."""
+        """Process user message using LLM-powered AI service with smart confirmation detection."""
         phone_number = state.get("phone_number", session_id)
         user_name = state.get("user_name", "Customer")
         
@@ -85,17 +85,26 @@ I can help with:
             # Get conversation history
             conversation_history = state.get("conversation_history", [])
             
-            # Get current session state for context
+            # CRITICAL: Check if we're in a confirmation state
+            pending_confirmation = state.get("pending_fault_confirmation", False)
+            
+            # Get current session state for context (must include pending_fault_confirmation)
             session_state = {
                 "fault_data": state.get("fault_data", {}),
                 "account_number": state.get("account_number"),
                 "billing_checked": state.get("billing_checked", False),
-                "pending_fault_confirmation": state.get("pending_fault_confirmation", False)
+                "pending_fault_confirmation": pending_confirmation,  # Pass this to AI service
+                "phone_number": phone_number
             }
+            
+            # Log confirmation state for debugging
+            if pending_confirmation:
+                logger.info(f"🔔 CONFIRMATION MODE: Waiting for user response to confirm fault details")
+                logger.info(f"Fault data: {session_state.get('fault_data', {})}")
             
             logger.info(f"Calling AI service with LLM for: {user_message[:100]}")
             
-            # Generate AI response using LLM
+            # Generate AI response using LLM (AI service will handle smart confirmation detection)
             ai_response, intent, state_update = self.ai_service.generate_response(
                 user_message, 
                 conversation_history,
@@ -109,6 +118,7 @@ I can help with:
             # Update state with any changes from AI service
             for key, value in state_update.items():
                 state[key] = value
+                logger.info(f"State updated: {key} = {str(value)[:100]}")
             
             # Update conversation history
             conversation_entry = {
@@ -134,7 +144,10 @@ I can help with:
                 intent
             )
             
+            # Save updated state
             self.session_manager.update_session_state(session_id, state)
+            
+            logger.info(f"✅ Response sent. Current state: pending_confirmation={state.get('pending_fault_confirmation', False)}")
             
             return self.whatsapp_service.create_text_message(session_id, ai_response)
         
