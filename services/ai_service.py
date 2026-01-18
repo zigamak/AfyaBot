@@ -18,67 +18,40 @@ except ImportError:
 class AIService:
     """
     Enhanced AI-powered conversational service for BEDC WhatsApp Support Bot
-    using LLM for intent detection and response generation with PostgreSQL.
+    using LLM for intent detection and response generation.
     """
 
-    def __init__(self, config, db_manager):
-        """Initialize AI Service with LLM capabilities and database manager."""
-        logger.info("=" * 60)
-        logger.info("AIService initialization started")
-        logger.info("=" * 60)
-        
-        self.db_manager = db_manager
-        logger.info("✓ Database manager assigned")
+    def __init__(self, config, data_manager):
+        """Initialize AI Service with LLM capabilities."""
+        self.data_manager = data_manager
         
         # Get OpenAI API key
-        logger.info("Searching for OpenAI API key...")
         try:
             if isinstance(config, dict):
-                self.openai_api_key = config.get("openai_api_key") or config.get("OPENAI_API_KEY")
-                logger.info(f"Config is dict, API key found: {bool(self.openai_api_key)}")
+                self.openai_api_key = config.get("openai_api_key")
             else:
                 self.openai_api_key = getattr(config, 'OPENAI_API_KEY', os.getenv("OPENAI_API_KEY"))
-                logger.info(f"Config is object, API key found: {bool(self.openai_api_key)}")
-        except Exception as e:
-            logger.warning(f"Error getting OpenAI API key from config: {e}")
+        except:
             self.openai_api_key = None
-        
-        if not self.openai_api_key:
-            self.openai_api_key = os.getenv("OPENAI_API_KEY")
-            logger.info(f"Checked environment variable, API key found: {bool(self.openai_api_key)}")
         
         # Initialize OpenAI client if available
         self.client = None
         self.ai_enabled = False
         
-        logger.info(f"OPENAI_AVAILABLE: {OPENAI_AVAILABLE}")
-        logger.info(f"API Key present: {bool(self.openai_api_key)}")
-        
         if OPENAI_AVAILABLE and self.openai_api_key:
             try:
-                logger.info("Initializing OpenAI client...")
                 self.client = OpenAI(api_key=self.openai_api_key)
                 self.ai_enabled = True
-                logger.info("✓ AI Service initialized with LLM support")
+                logger.info("AI Service initialized with LLM support")
             except Exception as e:
-                logger.error(f"❌ Failed to initialize OpenAI client: {e}")
+                logger.error(f"Failed to initialize OpenAI client: {e}")
                 self.ai_enabled = False
         else:
-            if not OPENAI_AVAILABLE:
-                logger.warning("⚠ OpenAI library not available")
-            if not self.openai_api_key:
-                logger.warning("⚠ OpenAI API key not found")
             logger.warning("AI Service running in fallback mode (pattern matching only)")
             self.ai_enabled = False
         
         # Load FAQ knowledge base
-        logger.info("Loading FAQ knowledge base...")
         self.faq_knowledge = self._load_faq_knowledge()
-        logger.info(f"✓ FAQ knowledge base loaded ({len(self.faq_knowledge)} characters)")
-        
-        logger.info("=" * 60)
-        logger.info(f"✅ AIService initialization completed (AI enabled: {self.ai_enabled})")
-        logger.info("=" * 60)
 
     def _load_faq_knowledge(self) -> str:
         """Load FAQ knowledge base for the LLM."""
@@ -282,10 +255,10 @@ BALANCE: Be human, caring, and natural. Avoid sounding like a bot."""
                 context_parts.append(state_info)
             
             if customer_data:
-                context_parts.append(f"CUSTOMER DATA: {json.dumps(customer_data, default=str)}")
+                context_parts.append(f"CUSTOMER DATA: {json.dumps(customer_data)}")
             
             if billing_result:
-                context_parts.append(f"BILLING STATUS: {json.dumps(billing_result, default=str)}")
+                context_parts.append(f"BILLING STATUS: {json.dumps(billing_result)}")
             
             context = "\n".join(context_parts) if context_parts else "No additional context."
             
@@ -386,6 +359,98 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
             "required_data": []
         }
 
+    def _is_affirmative(self, message: str) -> bool:
+        """
+        Check if message is an affirmative response.
+        Handles various ways users might confirm.
+        """
+        if not message:
+            return False
+        
+        message_lower = message.lower().strip()
+        
+        # Direct affirmatives
+        affirmative_keywords = [
+            'yes', 'y', 'yeah', 'yep', 'yup', 'sure', 'confirm', 'correct', 
+            'right', 'ok', 'okay', 'fine', 'good', 'proceed', 'go ahead',
+            'that\'s right', 'that is right', 'yes it is', 'yes that\'s correct',
+            'yes that is correct', 'confirmed', 'absolutely', 'definitely',
+            'affirmative', 'indeed', 'exactly', 'perfect', 'accurate',
+            'true', 'correct information', 'all correct', 'looks good',
+            'looks right', 'everything is correct', 'everything correct'
+        ]
+        
+        # Check for exact matches or partial matches
+        for keyword in affirmative_keywords:
+            if keyword in message_lower:
+                return True
+        
+        # Check for affirmative phrases with variations
+        affirmative_patterns = [
+            r'\byes\b',
+            r'\byeah\b',
+            r'\byup\b',
+            r'\bcorrect\b',
+            r'\bright\b',
+            r'\bok\b',
+            r'\bconfirm\b',
+            r'\bproceed\b',
+            r'that.{0,5}(is|\'s).{0,5}(right|correct)',
+            r'(all|everything).{0,5}(is|looks|seems).{0,5}(correct|right|good|fine)',
+            r'go.{0,5}ahead'
+        ]
+        
+        for pattern in affirmative_patterns:
+            if re.search(pattern, message_lower):
+                return True
+        
+        return False
+
+    def _is_negative(self, message: str) -> bool:
+        """
+        Check if message is a negative response.
+        Handles various ways users might reject or request changes.
+        """
+        if not message:
+            return False
+        
+        message_lower = message.lower().strip()
+        
+        # Direct negatives
+        negative_keywords = [
+            'no', 'n', 'nope', 'nah', 'wrong', 'incorrect', 'not right',
+            'not correct', 'update', 'change', 'fix', 'modify', 'edit',
+            'that\'s wrong', 'that is wrong', 'no it\'s not', 'no it is not',
+            'not mine', 'not my', 'different', 'another', 'other',
+            'mistake', 'error', 'inaccurate', 'false', 'not accurate',
+            'needs update', 'need to change', 'need to update', 'not this',
+            'that\'s not right', 'that is not right'
+        ]
+        
+        # Check for exact matches or partial matches
+        for keyword in negative_keywords:
+            if keyword in message_lower:
+                return True
+        
+        # Check for negative phrases with variations
+        negative_patterns = [
+            r'\bno\b',
+            r'\bnope\b',
+            r'\bnah\b',
+            r'\bwrong\b',
+            r'\bincorrect\b',
+            r'not.{0,5}(right|correct|mine|my|accurate)',
+            r'(that|this|it).{0,5}(is|\'s).{0,5}(wrong|incorrect|not right)',
+            r'need.{0,5}(to|).{0,5}(change|update|fix|modify)',
+            r'(change|update|fix|modify).{0,5}(it|this|that)'
+        ]
+        
+        for pattern in negative_patterns:
+            if re.search(pattern, message_lower):
+                return True
+        
+        return False
+
     def extract_account_number(self, message: str) -> Optional[str]:
         """Extract account number from message."""
         if not message:
@@ -418,14 +483,14 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
         # Check if we're waiting for fault confirmation
         pending_confirmation = session_state.get("pending_fault_confirmation", False)
         
-        # Handle confirmation responses
+        # Handle confirmation responses with smart detection
         if pending_confirmation:
-            confirmation_lower = user_message.lower().strip()
-            if confirmation_lower in ['yes', 'y', 'confirm', 'correct', 'ok', 'okay']:
+            # Use smart affirmative/negative detection
+            if self._is_affirmative(user_message):
                 # Proceed with logging the fault
                 fault_data = session_state.get("fault_data", {})
                 
-                success = self.db_manager.save_fault_report(
+                success = self.data_manager.save_fault_report(
                     fault_data["phone_number"],
                     fault_data["account_number"],
                     fault_data["email"],
@@ -447,12 +512,17 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
                         "pending_fault_confirmation": False
                     })
             
-            elif confirmation_lower in ['no', 'n', 'wrong', 'incorrect', 'update']:
+            elif self._is_negative(user_message):
                 reply = "No problem. What would you like to update? Please provide the correct account number or email."
                 return (reply, "Fault", {
                     "pending_fault_confirmation": False,
                     "fault_data": {}
                 })
+            
+            else:
+                # If unclear, ask for clarification
+                reply = "I didn't quite catch that. Please reply 'Yes' to confirm the details are correct, or 'No' if you need to update them."
+                return (reply, "FaultConfirmation", session_state)
         
         # Check if account number already exists in session
         saved_account_number = session_state.get("account_number")
@@ -472,10 +542,10 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
         customer_email = None
         
         if account_number:
-            customer_data = self.db_manager.get_customer_by_account(account_number)
+            customer_data = self.data_manager.get_customer_by_account(account_number)
             if customer_data:
-                billing_result = self.db_manager.check_billing_status(account_number)
-                customer_email = customer_data.get("email")
+                billing_result = self.data_manager.check_billing_status(account_number)
+                customer_email = customer_data.get("email")  # Get email from database
                 logger.info(f"Found customer email in database: {customer_email}")
         
         # Use database email if user hasn't provided one

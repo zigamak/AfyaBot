@@ -1,152 +1,64 @@
 import logging
 import os
+import json
 from typing import Dict, List, Any, Optional
-from datetime import datetime, date
-from contextlib import contextmanager
-
-# Try to import psycopg2 (binary version preferred for cloud platforms)
-try:
-    import psycopg2
-    from psycopg2.extras import RealDictCursor
-    from psycopg2.pool import SimpleConnectionPool
-    PSYCOPG2_AVAILABLE = True
-except ImportError:
-    PSYCOPG2_AVAILABLE = False
-    psycopg2 = None
-    RealDictCursor = None
-    SimpleConnectionPool = None
+from datetime import datetime
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-class DBManager:
-    """Manages database interactions for BEDC WhatsApp Bot using PostgreSQL."""
+class DataManager:
+    """Manages data interactions for BEDC WhatsApp Bot using JSON file storage."""
 
     def __init__(self, config=None):
         """
-        Initialize DBManager with PostgreSQL connection.
+        Initialize DataManager with JSON file paths.
 
         Args:
-            config: Configuration object or dictionary with database credentials
+            config: Configuration object or dictionary (optional for JSON-based storage)
         """
-        logger.info("=" * 60)
-        logger.info("DBManager initialization started")
-        logger.info("=" * 60)
+        # Set up data directory
+        self.data_dir = Path(__file__).parent.parent / "data"
+        self.data_dir.mkdir(exist_ok=True)
         
-        # Check if psycopg2 is available
-        logger.info(f"Checking psycopg2 availability...")
-        logger.info(f"PSYCOPG2_AVAILABLE: {PSYCOPG2_AVAILABLE}")
+        # Define file paths
+        self.customer_data_file = self.data_dir / "customer_data.json"
+        self.conversations_file = self.data_dir / "conversations.json"
+        self.fault_reports_file = self.data_dir / "fault_reports.json"
+        self.map_applications_file = self.data_dir / "map_applications.json"
         
-        if not PSYCOPG2_AVAILABLE:
-            logger.error("❌ psycopg2 is not installed. Install it with: pip install psycopg2-binary")
-            raise ImportError(
-                "psycopg2 is required for database operations. "
-                "Install it with: pip install psycopg2-binary"
-            )
+        # Initialize data structures
+        self.customer_data = self._load_json(self.customer_data_file, {"customers": [], "feeders": {}})
+        self.conversations = self._load_json(self.conversations_file, {})
+        self.fault_reports = self._load_json(self.fault_reports_file, [])
+        self.map_applications = self._load_json(self.map_applications_file, [])
         
-        logger.info("✓ psycopg2 is available")
-        
-        # Get database connection string - try multiple sources
-        self.db_url = None
-        
-        logger.info("Searching for database URL in config...")
-        logger.info(f"Config type: {type(config)}")
-        logger.info(f"Config object: {config}")
-        
-        # Try config object attributes (try both DB_URL and DATABASE_URL)
-        if config:
-            logger.info("Checking config object attributes...")
-            if hasattr(config, 'DB_URL'):
-                logger.info(f"config.DB_URL exists: {bool(config.DB_URL)}")
-                if config.DB_URL:
-                    self.db_url = config.DB_URL
-                    logger.info("✓ Using DB_URL from config.DB_URL")
-            
-            if not self.db_url and hasattr(config, 'DATABASE_URL'):
-                logger.info(f"config.DATABASE_URL exists: {bool(config.DATABASE_URL)}")
-                if config.DATABASE_URL:
-                    self.db_url = config.DATABASE_URL
-                    logger.info("✓ Using DATABASE_URL from config.DATABASE_URL")
-        
-        # Try config dict
-        if not self.db_url and config and isinstance(config, dict):
-            logger.info("Checking config dictionary...")
-            db_url_from_dict = config.get("DB_URL") or config.get("DATABASE_URL") or config.get("database_url")
-            if db_url_from_dict:
-                self.db_url = db_url_from_dict
-                logger.info("✓ Using database URL from config dict")
-        
-        # Try environment variables
-        if not self.db_url:
-            logger.info("Checking environment variables...")
-            env_db_url = os.getenv("DB_URL")
-            env_database_url = os.getenv("DATABASE_URL")
-            logger.info(f"DB_URL env var exists: {bool(env_db_url)}")
-            logger.info(f"DATABASE_URL env var exists: {bool(env_database_url)}")
-            
-            self.db_url = env_db_url or env_database_url
-            if self.db_url:
-                logger.info("✓ Using database URL from environment variable")
-        
-        if not self.db_url:
-            logger.error("❌ Database URL not found in config or environment")
-            logger.error("Tried sources:")
-            logger.error("  - config.DB_URL")
-            logger.error("  - config.DATABASE_URL")
-            logger.error("  - config dict ['DB_URL', 'DATABASE_URL', 'database_url']")
-            logger.error("  - os.getenv('DB_URL')")
-            logger.error("  - os.getenv('DATABASE_URL')")
-            raise ValueError("Database URL not found. Please add DB_URL or DATABASE_URL to your config.py or .env file")
-        
-        logger.info(f"Database URL found: {self.db_url[:30]}...") # Only show first 30 chars for security
-        
-        # Initialize connection pool
-        logger.info("Initializing PostgreSQL connection pool...")
-        try:
-            logger.info("Creating SimpleConnectionPool with:")
-            logger.info(f"  - minconn: 1")
-            logger.info(f"  - maxconn: 10")
-            logger.info(f"  - dsn: {self.db_url[:50]}...")
-            
-            self.pool = SimpleConnectionPool(
-                minconn=1,
-                maxconn=10,
-                dsn=self.db_url
-            )
-            logger.info("✓ Connection pool created successfully")
-            
-            # Test connection
-            logger.info("Testing database connection...")
-            with self.get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT 1")
-                    result = cur.fetchone()
-                    logger.info(f"✓ Database connection test successful: {result}")
-            
-            logger.info("=" * 60)
-            logger.info("✅ DBManager initialization completed successfully")
-            logger.info("=" * 60)
-                    
-        except Exception as e:
-            logger.error("=" * 60)
-            logger.error(f"❌ Failed to initialize database connection")
-            logger.error(f"Error type: {type(e).__name__}")
-            logger.error(f"Error message: {str(e)}")
-            logger.error("=" * 60)
-            raise
+        logger.info("DataManager initialized with JSON file storage")
+        logger.info(f"Loaded {len(self.customer_data.get('customers', []))} customer records")
 
-    @contextmanager
-    def get_connection(self):
-        """Context manager for database connections."""
-        conn = self.pool.getconn()
+    def _load_json(self, filepath: Path, default: Any) -> Any:
+        """Load JSON data from file or return default if file doesn't exist."""
         try:
-            yield conn
-            conn.commit()
+            if filepath.exists():
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            else:
+                # Create file with default data
+                self._save_json(filepath, default)
+                return default
         except Exception as e:
-            conn.rollback()
-            logger.error(f"Database error: {e}")
-            raise
-        finally:
-            self.pool.putconn(conn)
+            logger.error(f"Error loading {filepath}: {e}")
+            return default
+
+    def _save_json(self, filepath: Path, data: Any) -> bool:
+        """Save data to JSON file."""
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            return True
+        except Exception as e:
+            logger.error(f"Error saving to {filepath}: {e}")
+            return False
 
     def get_customer_by_account(self, account_number: str) -> Optional[Dict[str, Any]]:
         """
@@ -159,88 +71,15 @@ class DBManager:
             Optional[Dict[str, Any]]: Customer data or None if not found
         """
         try:
-            with self.get_connection() as conn:
-                with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("""
-                        SELECT 
-                            id,
-                            account_number,
-                            customer_name,
-                            phone_number,
-                            email,
-                            address,
-                            feeder,
-                            meter_number,
-                            is_metered AS metered,
-                            bill_amount,
-                            nerc_cap,
-                            customer_category,
-                            status,
-                            created_at,
-                            updated_at
-                        FROM customers
-                        WHERE account_number = %s
-                        LIMIT 1
-                    """, (account_number,))
-                    
-                    result = cur.fetchone()
-                    
-                    if result:
-                        customer = dict(result)
-                        logger.info(f"Found customer: {account_number}")
-                        return customer
-                    else:
-                        logger.info(f"Customer not found: {account_number}")
-                        return None
-                        
+            customers = self.customer_data.get("customers", [])
+            for customer in customers:
+                if customer.get("account_number") == account_number:
+                    logger.info(f"Found customer: {account_number}")
+                    return customer
+            logger.info(f"Customer not found: {account_number}")
+            return None
         except Exception as e:
             logger.error(f"Error retrieving customer {account_number}: {e}")
-            return None
-
-    def get_customer_by_phone(self, phone_number: str) -> Optional[Dict[str, Any]]:
-        """
-        Retrieve customer information by phone number.
-
-        Args:
-            phone_number (str): Customer's phone number
-
-        Returns:
-            Optional[Dict[str, Any]]: Customer data or None if not found
-        """
-        try:
-            with self.get_connection() as conn:
-                with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("""
-                        SELECT 
-                            id,
-                            account_number,
-                            customer_name,
-                            phone_number,
-                            email,
-                            address,
-                            feeder,
-                            meter_number,
-                            is_metered AS metered,
-                            bill_amount,
-                            nerc_cap,
-                            customer_category,
-                            status
-                        FROM customers
-                        WHERE phone_number = %s
-                        LIMIT 1
-                    """, (phone_number,))
-                    
-                    result = cur.fetchone()
-                    
-                    if result:
-                        logger.info(f"Found customer by phone: {phone_number}")
-                        return dict(result)
-                    else:
-                        logger.info(f"Customer not found by phone: {phone_number}")
-                        return None
-                        
-        except Exception as e:
-            logger.error(f"Error retrieving customer by phone {phone_number}: {e}")
             return None
 
     def check_billing_status(self, account_number: str) -> Dict[str, Any]:
@@ -261,8 +100,8 @@ class DBManager:
                     "message": "Account number not found in our records"
                 }
             
-            bill_amount = float(customer.get("bill_amount", 0))
-            nerc_cap = float(customer.get("nerc_cap", 0))
+            bill_amount = customer.get("bill_amount", 0)
+            nerc_cap = customer.get("nerc_cap", 0)
             difference = bill_amount - nerc_cap
             
             if bill_amount <= nerc_cap:
@@ -282,7 +121,7 @@ class DBManager:
             return {"status": "error", "message": str(e)}
 
     def save_conversation(self, phone_number: str, session_id: str, user_message: str, 
-                         assistant_response: str, intent: str = None, account_number: str = None):
+                         assistant_response: str, intent: str = None):
         """
         Save a conversation entry.
 
@@ -292,25 +131,26 @@ class DBManager:
             user_message (str): User's message
             assistant_response (str): Bot's response
             intent (str): Detected intent (optional)
-            account_number (str): Account number if available (optional)
         """
         try:
-            with self.get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        INSERT INTO conversations 
-                        (session_id, phone_number, user_message, assistant_response, intent, account_number, created_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    """, (
-                        session_id,
-                        phone_number,
-                        user_message,
-                        assistant_response,
-                        intent,
-                        account_number,
-                        datetime.now()
-                    ))
-                    
+            if phone_number not in self.conversations:
+                self.conversations[phone_number] = []
+            
+            conversation_entry = {
+                "session_id": session_id,
+                "user_message": user_message,
+                "assistant_response": assistant_response,
+                "intent": intent,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            self.conversations[phone_number].append(conversation_entry)
+            
+            # Keep only last 50 conversations per user
+            if len(self.conversations[phone_number]) > 50:
+                self.conversations[phone_number] = self.conversations[phone_number][-50:]
+            
+            self._save_json(self.conversations_file, self.conversations)
             logger.info(f"Saved conversation for {phone_number}, intent: {intent}")
         except Exception as e:
             logger.error(f"Error saving conversation: {e}")
@@ -327,31 +167,8 @@ class DBManager:
             List[Dict[str, Any]]: List of conversation entries
         """
         try:
-            with self.get_connection() as conn:
-                with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("""
-                        SELECT 
-                            id,
-                            session_id,
-                            user_message,
-                            assistant_response,
-                            intent,
-                            account_number,
-                            created_at
-                        FROM conversations
-                        WHERE phone_number = %s
-                        ORDER BY created_at DESC
-                        LIMIT %s
-                    """, (phone_number, limit))
-                    
-                    results = cur.fetchall()
-                    conversations = [dict(row) for row in results]
-                    
-                    # Reverse to get chronological order
-                    conversations.reverse()
-                    
-                    return conversations
-                    
+            conversations = self.conversations.get(phone_number, [])
+            return conversations[-limit:] if conversations else []
         except Exception as e:
             logger.error(f"Error retrieving conversation history: {e}")
             return []
@@ -371,31 +188,19 @@ class DBManager:
             bool: True if saved successfully
         """
         try:
-            # Generate reference number
-            reference_number = f"FR-{account_number}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            fault_report = {
+                "phone_number": phone_number,
+                "account_number": account_number,
+                "email": email,
+                "fault_description": fault_description,
+                "status": "pending",
+                "timestamp": datetime.now().isoformat()
+            }
             
-            with self.get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        INSERT INTO fault_reports 
-                        (reference_number, phone_number, account_number, email, fault_description, 
-                         fault_type, status, created_at, updated_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (
-                        reference_number,
-                        phone_number,
-                        account_number,
-                        email,
-                        fault_description,
-                        'power_outage',
-                        'pending',
-                        datetime.now(),
-                        datetime.now()
-                    ))
-                    
-            logger.info(f"Saved fault report {reference_number} for account {account_number}")
+            self.fault_reports.append(fault_report)
+            self._save_json(self.fault_reports_file, self.fault_reports)
+            logger.info(f"Saved fault report for account {account_number}")
             return True
-            
         except Exception as e:
             logger.error(f"Error saving fault report: {e}")
             return False
@@ -415,30 +220,19 @@ class DBManager:
             bool: True if saved successfully
         """
         try:
-            # Generate application number
-            application_number = f"MAP-{datetime.now().strftime('%Y%m%d')}-{account_number}"
+            map_application = {
+                "phone_number": phone_number,
+                "account_number": account_number,
+                "customer_name": customer_name,
+                "email": email,
+                "status": "pending",
+                "timestamp": datetime.now().isoformat()
+            }
             
-            with self.get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        INSERT INTO map_applications 
-                        (application_number, phone_number, account_number, customer_name, email, 
-                         status, created_at, updated_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (
-                        application_number,
-                        phone_number,
-                        account_number,
-                        customer_name,
-                        email,
-                        'pending',
-                        datetime.now(),
-                        datetime.now()
-                    ))
-                    
-            logger.info(f"Saved MAP application {application_number} for account {account_number}")
+            self.map_applications.append(map_application)
+            self._save_json(self.map_applications_file, self.map_applications)
+            logger.info(f"Saved MAP application for account {account_number}")
             return True
-            
         except Exception as e:
             logger.error(f"Error saving MAP application: {e}")
             return False
@@ -454,30 +248,8 @@ class DBManager:
             Optional[Dict[str, Any]]: Feeder information or None
         """
         try:
-            with self.get_connection() as conn:
-                with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("""
-                        SELECT 
-                            id,
-                            feeder_name,
-                            feeder_code,
-                            nerc_cap_residential,
-                            nerc_cap_commercial,
-                            nerc_cap_industrial,
-                            location,
-                            status
-                        FROM feeders
-                        WHERE feeder_name = %s
-                        LIMIT 1
-                    """, (feeder_name,))
-                    
-                    result = cur.fetchone()
-                    
-                    if result:
-                        return dict(result)
-                    else:
-                        return None
-                        
+            feeders = self.customer_data.get("feeders", {})
+            return feeders.get(feeder_name)
         except Exception as e:
             logger.error(f"Error retrieving feeder info: {e}")
             return None
@@ -490,62 +262,35 @@ class DBManager:
             Dict with analytics metrics
         """
         try:
-            with self.get_connection() as conn:
-                with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    # Get total customers
-                    cur.execute("SELECT COUNT(*) as total FROM customers WHERE status = 'active'")
-                    total_customers = cur.fetchone()['total']
-                    
-                    # Get total conversations
-                    cur.execute("SELECT COUNT(*) as total FROM conversations")
-                    total_conversations = cur.fetchone()['total']
-                    
-                    # Get total fault reports
-                    cur.execute("SELECT COUNT(*) as total FROM fault_reports")
-                    total_fault_reports = cur.fetchone()['total']
-                    
-                    # Get total MAP applications
-                    cur.execute("SELECT COUNT(*) as total FROM map_applications")
-                    total_map_applications = cur.fetchone()['total']
-                    
-                    # Count customers above NERC cap
-                    cur.execute("""
-                        SELECT COUNT(*) as total 
-                        FROM customers 
-                        WHERE status = 'active' AND bill_amount > nerc_cap
-                    """)
-                    above_cap_count = cur.fetchone()['total']
-                    
-                    # Count unmetered customers
-                    cur.execute("""
-                        SELECT COUNT(*) as total 
-                        FROM customers 
-                        WHERE status = 'active' AND is_metered = FALSE
-                    """)
-                    unmetered_customers = cur.fetchone()['total']
-                    
-                    return {
-                        "total_customers": total_customers,
-                        "total_conversations": total_conversations,
-                        "total_fault_reports": total_fault_reports,
-                        "total_map_applications": total_map_applications,
-                        "customers_above_cap": above_cap_count,
-                        "unmetered_customers": unmetered_customers
-                    }
-                    
+            total_customers = len(self.customer_data.get("customers", []))
+            total_conversations = sum(len(convs) for convs in self.conversations.values())
+            total_fault_reports = len(self.fault_reports)
+            total_map_applications = len(self.map_applications)
+            
+            # Count billing issues
+            above_cap_count = 0
+            for customer in self.customer_data.get("customers", []):
+                if customer.get("bill_amount", 0) > customer.get("nerc_cap", 0):
+                    above_cap_count += 1
+            
+            return {
+                "total_customers": total_customers,
+                "total_conversations": total_conversations,
+                "total_fault_reports": total_fault_reports,
+                "total_map_applications": total_map_applications,
+                "customers_above_cap": above_cap_count,
+                "unmetered_customers": total_customers  # All are unmetered in sample data
+            }
         except Exception as e:
             logger.error(f"Error getting analytics: {e}")
             return {}
 
     def close(self):
-        """Close all database connections."""
+        """Save all data and cleanup."""
         try:
-            if self.pool:
-                self.pool.closeall()
-                logger.info("Database connections closed")
+            self._save_json(self.conversations_file, self.conversations)
+            self._save_json(self.fault_reports_file, self.fault_reports)
+            self._save_json(self.map_applications_file, self.map_applications)
+            logger.info("DataManager closed and all data saved")
         except Exception as e:
-            logger.error(f"Error closing database connections: {e}")
-
-
-# Keep the old DataManager name for backward compatibility
-DataManager = DBManager
+            logger.error(f"Error closing DataManager: {e}")

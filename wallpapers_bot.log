@@ -7083,3 +7083,79 @@ ValueError: DATABASE_URL not found in config or environment variables
 2026-01-18 01:10:19,822 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
  * Running on http://127.0.0.1:8000
 2026-01-18 01:10:19,822 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2026-01-18 01:45:44,384 - __main__ - ERROR - Environment check failed. Please fix the issues above.
+2026-01-18 01:45:49,418 - __main__ - INFO - Starting Wallpaper.ng AI Assistant server...
+2026-01-18 01:45:53,983 - utils.session_manager - INFO - SessionManager initialized. Default timeouts: Unpaid=3000s, Paid=12000s
+2026-01-18 01:45:53,983 - utils.data_manager - INFO - ============================================================
+2026-01-18 01:45:53,985 - utils.data_manager - INFO - DBManager initialization started
+2026-01-18 01:45:53,985 - utils.data_manager - INFO - ============================================================
+2026-01-18 01:45:53,985 - utils.data_manager - INFO - Checking psycopg2 availability...
+2026-01-18 01:45:53,987 - utils.data_manager - INFO - PSYCOPG2_AVAILABLE: True
+2026-01-18 01:45:54,005 - utils.data_manager - INFO - Searching for database URL in config...
+2026-01-18 01:45:54,005 - utils.data_manager - INFO - Config type: <class 'config.Config'>
+2026-01-18 01:45:54,005 - utils.data_manager - INFO - Config object: <config.Config object at 0x000002465B4EB2F0>
+2026-01-18 01:45:54,008 - utils.data_manager - INFO - Checking config object attributes...
+2026-01-18 01:45:54,008 - utils.data_manager - INFO - config.DB_URL exists: True
+2026-01-18 01:45:54,017 - utils.data_manager - INFO - Database URL found: postgresql://neondb_owner:npg_...
+2026-01-18 01:45:54,017 - utils.data_manager - INFO - Initializing PostgreSQL connection pool...
+2026-01-18 01:45:54,017 - utils.data_manager - INFO - Creating SimpleConnectionPool with:
+2026-01-18 01:45:54,019 - utils.data_manager - INFO -   - minconn: 1
+2026-01-18 01:45:54,019 - utils.data_manager - INFO -   - maxconn: 10
+2026-01-18 01:45:54,019 - utils.data_manager - INFO -   - dsn: postgresql://neondb_owner:npg_2JP3qhyuMjAs@ep-autu...
+2026-01-18 01:45:56,139 - utils.data_manager - INFO - Testing database connection...
+2026-01-18 01:45:56,928 - utils.data_manager - INFO - ============================================================
+2026-01-18 01:45:56,934 - utils.data_manager - INFO - ============================================================
+2026-01-18 01:45:56,934 - services.whatsapp_service - DEBUG - WhatsAppService initialized with phone_number_id: 846412388549528
+2026-01-18 01:45:56,937 - app - INFO - Core services initialized for AfyaBot (Gynecology Medical AI)
+2026-01-18 01:45:56,937 - services.ai_service - INFO - ============================================================
+2026-01-18 01:45:56,937 - services.ai_service - INFO - AIService initialization started
+2026-01-18 01:45:56,937 - services.ai_service - INFO - ============================================================
+2026-01-18 01:45:56,947 - services.ai_service - INFO - Searching for OpenAI API key...
+2026-01-18 01:45:56,947 - services.ai_service - INFO - Config is object, API key found: True
+2026-01-18 01:45:56,947 - services.ai_service - INFO - OPENAI_AVAILABLE: True
+2026-01-18 01:45:56,947 - services.ai_service - INFO - API Key present: True
+2026-01-18 01:45:56,947 - services.ai_service - INFO - Initializing OpenAI client...
+2026-01-18 01:45:57,843 - services.ai_service - INFO - Loading FAQ knowledge base...
+2026-01-18 01:45:57,853 - services.ai_service - INFO - ============================================================
+2026-01-18 01:45:57,859 - services.ai_service - INFO - ============================================================
+2026-01-18 01:45:57,859 - handlers.ai_handler - INFO - AIHandler: LLM-powered AI Service initialized
+2026-01-18 01:45:57,860 - services.ai_service - INFO - ============================================================
+2026-01-18 01:45:57,861 - services.ai_service - INFO - AIService initialization started
+2026-01-18 01:45:57,861 - services.ai_service - INFO - ============================================================
+2026-01-18 01:45:57,870 - services.ai_service - INFO - Searching for OpenAI API key...
+2026-01-18 01:45:57,871 - services.ai_service - INFO - Config is object, API key found: True
+2026-01-18 01:45:57,871 - services.ai_service - INFO - OPENAI_AVAILABLE: True
+2026-01-18 01:45:57,871 - services.ai_service - INFO - API Key present: True
+2026-01-18 01:45:57,871 - services.ai_service - INFO - Initializing OpenAI client...
+2026-01-18 01:45:58,488 - services.ai_service - INFO - Loading FAQ knowledge base...
+2026-01-18 01:45:58,496 - services.ai_service - INFO - ============================================================
+2026-01-18 01:45:58,502 - services.ai_service - INFO - ============================================================
+2026-01-18 01:45:58,502 - handlers.ai_handler - INFO - AIHandler: LLM-powered AI Service initialized
+2026-01-18 01:45:58,504 - message_processor - INFO - MessageProcessor initialized for Gynecology Medical AI (AfyaBot).
+2026-01-18 01:45:58,504 - app - INFO - AfyaBot handlers and message processor initialized.
+2026-01-18 01:45:58,504 - utils.session_manager - INFO - SessionManager initialized. Default timeouts: Unpaid=3000s, Paid=12000s
+2026-01-18 01:45:58,504 - utils.data_manager - INFO - ============================================================
+2026-01-18 01:45:58,504 - utils.data_manager - INFO - DBManager initialization started
+2026-01-18 01:45:58,505 - utils.data_manager - INFO - ============================================================
+2026-01-18 01:45:58,505 - utils.data_manager - INFO - Checking psycopg2 availability...
+2026-01-18 01:45:58,505 - utils.data_manager - INFO - PSYCOPG2_AVAILABLE: True
+2026-01-18 01:45:58,541 - utils.data_manager - INFO - Searching for database URL in config...
+2026-01-18 01:45:58,541 - utils.data_manager - INFO - Config type: <class 'config.Config'>
+2026-01-18 01:45:58,541 - utils.data_manager - INFO - Config object: <config.Config object at 0x000002465B4EB2F0>
+2026-01-18 01:45:58,543 - utils.data_manager - INFO - Checking config object attributes...
+2026-01-18 01:45:58,543 - utils.data_manager - INFO - config.DB_URL exists: True
+2026-01-18 01:45:58,552 - utils.data_manager - INFO - Database URL found: postgresql://neondb_owner:npg_...
+2026-01-18 01:45:58,553 - utils.data_manager - INFO - Initializing PostgreSQL connection pool...
+2026-01-18 01:45:58,553 - utils.data_manager - INFO - Creating SimpleConnectionPool with:
+2026-01-18 01:45:58,553 - utils.data_manager - INFO -   - minconn: 1
+2026-01-18 01:45:58,553 - utils.data_manager - INFO -   - maxconn: 10
+2026-01-18 01:45:58,555 - utils.data_manager - INFO -   - dsn: postgresql://neondb_owner:npg_2JP3qhyuMjAs@ep-autu...
+2026-01-18 01:45:59,866 - utils.data_manager - INFO - Testing database connection...
+2026-01-18 01:46:00,682 - utils.data_manager - INFO - ============================================================
+2026-01-18 01:46:00,694 - utils.data_manager - INFO - ============================================================
+2026-01-18 01:46:00,694 - services.whatsapp_service - DEBUG - WhatsAppService initialized with phone_number_id: 846412388549528
+2026-01-18 01:46:00,695 - services.payment_service - INFO - PaymentService initialized
+2026-01-18 01:46:00,695 - app - INFO - WebhookHandler initialized with message processor.
+2026-01-18 01:46:00,774 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8000
+2026-01-18 01:46:00,774 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
