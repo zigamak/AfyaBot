@@ -23,35 +23,62 @@ class AIService:
 
     def __init__(self, config, db_manager):
         """Initialize AI Service with LLM capabilities and database manager."""
+        logger.info("=" * 60)
+        logger.info("AIService initialization started")
+        logger.info("=" * 60)
+        
         self.db_manager = db_manager
+        logger.info("✓ Database manager assigned")
         
         # Get OpenAI API key
+        logger.info("Searching for OpenAI API key...")
         try:
             if isinstance(config, dict):
-                self.openai_api_key = config.get("openai_api_key")
+                self.openai_api_key = config.get("openai_api_key") or config.get("OPENAI_API_KEY")
+                logger.info(f"Config is dict, API key found: {bool(self.openai_api_key)}")
             else:
                 self.openai_api_key = getattr(config, 'OPENAI_API_KEY', os.getenv("OPENAI_API_KEY"))
-        except:
+                logger.info(f"Config is object, API key found: {bool(self.openai_api_key)}")
+        except Exception as e:
+            logger.warning(f"Error getting OpenAI API key from config: {e}")
             self.openai_api_key = None
+        
+        if not self.openai_api_key:
+            self.openai_api_key = os.getenv("OPENAI_API_KEY")
+            logger.info(f"Checked environment variable, API key found: {bool(self.openai_api_key)}")
         
         # Initialize OpenAI client if available
         self.client = None
         self.ai_enabled = False
         
+        logger.info(f"OPENAI_AVAILABLE: {OPENAI_AVAILABLE}")
+        logger.info(f"API Key present: {bool(self.openai_api_key)}")
+        
         if OPENAI_AVAILABLE and self.openai_api_key:
             try:
+                logger.info("Initializing OpenAI client...")
                 self.client = OpenAI(api_key=self.openai_api_key)
                 self.ai_enabled = True
-                logger.info("AI Service initialized with LLM support")
+                logger.info("✓ AI Service initialized with LLM support")
             except Exception as e:
-                logger.error(f"Failed to initialize OpenAI client: {e}")
+                logger.error(f"❌ Failed to initialize OpenAI client: {e}")
                 self.ai_enabled = False
         else:
+            if not OPENAI_AVAILABLE:
+                logger.warning("⚠ OpenAI library not available")
+            if not self.openai_api_key:
+                logger.warning("⚠ OpenAI API key not found")
             logger.warning("AI Service running in fallback mode (pattern matching only)")
             self.ai_enabled = False
         
         # Load FAQ knowledge base
+        logger.info("Loading FAQ knowledge base...")
         self.faq_knowledge = self._load_faq_knowledge()
+        logger.info(f"✓ FAQ knowledge base loaded ({len(self.faq_knowledge)} characters)")
+        
+        logger.info("=" * 60)
+        logger.info(f"✅ AIService initialization completed (AI enabled: {self.ai_enabled})")
+        logger.info("=" * 60)
 
     def _load_faq_knowledge(self) -> str:
         """Load FAQ knowledge base for the LLM."""

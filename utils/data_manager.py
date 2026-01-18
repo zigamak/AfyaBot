@@ -28,60 +28,110 @@ class DBManager:
         Args:
             config: Configuration object or dictionary with database credentials
         """
+        logger.info("=" * 60)
+        logger.info("DBManager initialization started")
+        logger.info("=" * 60)
+        
         # Check if psycopg2 is available
+        logger.info(f"Checking psycopg2 availability...")
+        logger.info(f"PSYCOPG2_AVAILABLE: {PSYCOPG2_AVAILABLE}")
+        
         if not PSYCOPG2_AVAILABLE:
-            logger.error("psycopg2 is not installed. Install it with: pip install psycopg2-binary")
+            logger.error("❌ psycopg2 is not installed. Install it with: pip install psycopg2-binary")
             raise ImportError(
                 "psycopg2 is required for database operations. "
                 "Install it with: pip install psycopg2-binary"
             )
         
+        logger.info("✓ psycopg2 is available")
+        
         # Get database connection string - try multiple sources
         self.db_url = None
         
+        logger.info("Searching for database URL in config...")
+        logger.info(f"Config type: {type(config)}")
+        logger.info(f"Config object: {config}")
+        
         # Try config object attributes (try both DB_URL and DATABASE_URL)
         if config:
-            if hasattr(config, 'DB_URL') and config.DB_URL:
-                self.db_url = config.DB_URL
-                logger.info("Using DB_URL from config.DB_URL")
-            elif hasattr(config, 'DATABASE_URL') and config.DATABASE_URL:
-                self.db_url = config.DATABASE_URL
-                logger.info("Using DATABASE_URL from config.DATABASE_URL")
+            logger.info("Checking config object attributes...")
+            if hasattr(config, 'DB_URL'):
+                logger.info(f"config.DB_URL exists: {bool(config.DB_URL)}")
+                if config.DB_URL:
+                    self.db_url = config.DB_URL
+                    logger.info("✓ Using DB_URL from config.DB_URL")
+            
+            if not self.db_url and hasattr(config, 'DATABASE_URL'):
+                logger.info(f"config.DATABASE_URL exists: {bool(config.DATABASE_URL)}")
+                if config.DATABASE_URL:
+                    self.db_url = config.DATABASE_URL
+                    logger.info("✓ Using DATABASE_URL from config.DATABASE_URL")
         
         # Try config dict
         if not self.db_url and config and isinstance(config, dict):
-            self.db_url = config.get("DB_URL") or config.get("DATABASE_URL") or config.get("database_url")
-            if self.db_url:
-                logger.info("Using database URL from config dict")
+            logger.info("Checking config dictionary...")
+            db_url_from_dict = config.get("DB_URL") or config.get("DATABASE_URL") or config.get("database_url")
+            if db_url_from_dict:
+                self.db_url = db_url_from_dict
+                logger.info("✓ Using database URL from config dict")
         
         # Try environment variables
         if not self.db_url:
-            self.db_url = os.getenv("DB_URL") or os.getenv("DATABASE_URL")
+            logger.info("Checking environment variables...")
+            env_db_url = os.getenv("DB_URL")
+            env_database_url = os.getenv("DATABASE_URL")
+            logger.info(f"DB_URL env var exists: {bool(env_db_url)}")
+            logger.info(f"DATABASE_URL env var exists: {bool(env_database_url)}")
+            
+            self.db_url = env_db_url or env_database_url
             if self.db_url:
-                logger.info("Using database URL from environment variable")
+                logger.info("✓ Using database URL from environment variable")
         
         if not self.db_url:
-            logger.error("Database URL not found in config or environment")
-            logger.error("Tried: config.DB_URL, config.DATABASE_URL, os.getenv('DB_URL'), os.getenv('DATABASE_URL')")
+            logger.error("❌ Database URL not found in config or environment")
+            logger.error("Tried sources:")
+            logger.error("  - config.DB_URL")
+            logger.error("  - config.DATABASE_URL")
+            logger.error("  - config dict ['DB_URL', 'DATABASE_URL', 'database_url']")
+            logger.error("  - os.getenv('DB_URL')")
+            logger.error("  - os.getenv('DATABASE_URL')")
             raise ValueError("Database URL not found. Please add DB_URL or DATABASE_URL to your config.py or .env file")
         
+        logger.info(f"Database URL found: {self.db_url[:30]}...") # Only show first 30 chars for security
+        
         # Initialize connection pool
+        logger.info("Initializing PostgreSQL connection pool...")
         try:
+            logger.info("Creating SimpleConnectionPool with:")
+            logger.info(f"  - minconn: 1")
+            logger.info(f"  - maxconn: 10")
+            logger.info(f"  - dsn: {self.db_url[:50]}...")
+            
             self.pool = SimpleConnectionPool(
                 minconn=1,
                 maxconn=10,
                 dsn=self.db_url
             )
-            logger.info("Database connection pool initialized successfully")
+            logger.info("✓ Connection pool created successfully")
             
             # Test connection
+            logger.info("Testing database connection...")
             with self.get_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute("SELECT 1")
-                    logger.info("Database connection test successful")
+                    result = cur.fetchone()
+                    logger.info(f"✓ Database connection test successful: {result}")
+            
+            logger.info("=" * 60)
+            logger.info("✅ DBManager initialization completed successfully")
+            logger.info("=" * 60)
                     
         except Exception as e:
-            logger.error(f"Failed to initialize database connection: {e}")
+            logger.error("=" * 60)
+            logger.error(f"❌ Failed to initialize database connection")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.error(f"Error message: {str(e)}")
+            logger.error("=" * 60)
             raise
 
     @contextmanager
