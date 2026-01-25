@@ -1,1 +1,284 @@
-{}
+{
+  "2348055614455": [
+    {
+      "session_id": "2348055614455",
+      "user_message": "Heello",
+      "assistant_response": "I couldn't find an account associated with the number you provided. Please check and confirm:\n\n• Is the account number correct? (It should be 6 digits starting with '10')\n• If you don't have an account yet, visit our office at Ring Road, Benin City (Monday-Friday, 8AM-4PM) to create one. Bring valid ID and proof of address.\n\nYou can also provide a different account number if there was a typo.",
+      "intent": "AccountNotFound",
+      "timestamp": "2026-01-19T00:10:19.418951"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "I want to ask if i still have credtis",
+      "assistant_response": "Could you share your account number so I can look into your billing and check if you still have credits?",
+      "intent": "Billing",
+      "timestamp": "2026-01-19T00:22:32.086839"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "1222222",
+      "assistant_response": "I couldn't find an account associated with the number you provided. Please check and confirm:\n\n• Is the account number correct? (It should be 6 digits starting with '10')\n• If you don't have an account yet, visit our office at Ring Road, Benin City (Monday-Friday, 8AM-4PM) to create one. Bring valid ID and proof of address.\n\nYou can also provide a different account number if there was a typo.",
+      "intent": "AccountNotFound",
+      "timestamp": "2026-01-19T00:22:46.074543"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "100013",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100013\nEmail: omoregi****@gm***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:23:22.143397"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Yeah this is my account",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100013\nEmail: omoregi****@gm***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:24:20.233938"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Yes",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100013\nEmail: omoregi****@gm***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:24:38.621195"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Can i know how much my bill is and am i within cap?",
+      "assistant_response": "Could you share your account number so I can look into your billing?",
+      "intent": "Billing",
+      "timestamp": "2026-01-19T00:28:19.107289"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "100016",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100016\nEmail: afolay****@ya***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:28:32.936776"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Yes it is",
+      "assistant_response": "Great! Just to confirm - is this your account?\n\nAccount: 100016\nEmail: afolay****@ya***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:28:42.364142"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Ys",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100016\nEmail: afolay****@ya***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:29:16.722456"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "I want to sse if i stillhav credits",
+      "assistant_response": "Could you share your account number so I can check your credits for you?",
+      "intent": "Billing",
+      "timestamp": "2026-01-19T00:31:55.388137"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "123333",
+      "assistant_response": "I couldn't find an account associated with the number you provided. Please check and confirm:\n\n• Is the account number correct? (It should be 6 digits starting with '10')\n• If you don't have an account yet, visit our office at Ring Road, Benin City (Monday-Friday, 8AM-4PM) to create one. Bring valid ID and proof of address.\n\nYou can also provide a different account number if there was a typo.",
+      "intent": "AccountNotFound",
+      "timestamp": "2026-01-19T00:32:09.034728"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "100016",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100016\nEmail: afolay****@yahoo.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:32:22.831093"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Yeah this is my account number",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100016\nEmail: afolay****@yahoo.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:32:35.255838"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "I want to sse if i stillhav credits",
+      "assistant_response": "Could you share your account number so I can check your credits for you?",
+      "intent": "Billing",
+      "timestamp": "2026-01-19T00:35:42.846333"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "12333",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 12333\nEmail: ma****@gm***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:35:51.791647"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "No",
+      "assistant_response": "No problem. What would you like to update? Please provide the correct account number.",
+      "intent": "Billing",
+      "timestamp": "2026-01-19T00:36:46.683604"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "100016",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100016\nEmail: af****@ya***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:36:58.712551"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Yeah it is my account",
+      "assistant_response": "Just to confirm - is this your account?\n\nAccount: 100016\nEmail: af****@ya***.com\n\nReply 'Yes' to confirm or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:37:07.902078"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Yes",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100016\nEmail: af****@ya***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:37:15.489843"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Billing",
+      "assistant_response": "Could you share your account number so I can look into your billing?",
+      "intent": "Billing",
+      "timestamp": "2026-01-19T00:44:16.394494"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "3838383",
+      "assistant_response": "I couldn't find an account associated with the number you provided. Please check and confirm:\n\n• Is the account number correct? (It should be 6 digits starting with '10')\n• If you don't have an account yet, visit our office at Ring Road, Benin City (Monday-Friday, 8AM-4PM) to create one. Bring valid ID and proof of address.\n\nYou can also provide a different account number if there was a typo.",
+      "intent": "AccountNotFound",
+      "timestamp": "2026-01-19T00:44:24.840258"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "100014",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100014\nEmail: ad****@ho***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:44:41.394891"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Corrct it is my account",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100014\nEmail: ad****@ho***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:45:07.009213"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Billing",
+      "assistant_response": "Could you share your account number so I can look into your billing?",
+      "intent": "Billing",
+      "timestamp": "2026-01-19T00:50:15.364008"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "100014",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100014\nEmail: ad****@ho***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:50:26.084852"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Yes",
+      "assistant_response": "Thank you for confirming! Here’s your billing information:\n\nAccount: 100014\nEmail: ad****@ho***.com\n\nYour bill amount is ₦14,000, which is within the NERC cap of ₦14,000. There’s no difference.\n\nIf you have any further questions or need assistance, feel free to ask!",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:50:35.664227"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Billing",
+      "assistant_response": "Could you share your account number so I can look into your billing?",
+      "intent": "Billing",
+      "timestamp": "2026-01-19T00:51:16.119316"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "173737",
+      "assistant_response": "I couldn't find an account associated with the number you provided. Please check and confirm:\n\n• Is the account number correct? (It should be 6 digits starting with '10')\n• If you don't have an account yet, visit our office at Ring Road, Benin City (Monday-Friday, 8AM-4PM) to create one. Bring valid ID and proof of address.\n\nYou can also provide a different account number if there was a typo.",
+      "intent": "AccountNotFound",
+      "timestamp": "2026-01-19T00:51:21.531793"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "100014",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100014\nEmail: ad****@ho***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:51:35.038535"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Yeah correct this is my account",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100014\nEmail: ad****@ho***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:51:46.306355"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Yes",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100014\nEmail: ad****@ho***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T00:51:54.838726"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Billing",
+      "assistant_response": "Could you share your account number so I can look into your billing?",
+      "intent": "Billing",
+      "timestamp": "2026-01-19T01:01:18.234228"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "100014",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100014\nEmail: ad****@ho***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T01:01:30.067874"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Yes correct it is my account",
+      "assistant_response": "Your bill of ₦14,000 is within the ₦14,000 NERC cap for Ring Road feeder. Since you're an unmetered customer, your billing follows the approved methodology. For more accurate billing, apply for a prepaid meter at https://imaap.bedinelectric.com:55682/",
+      "intent": "Billing",
+      "timestamp": "2026-01-19T01:01:41.184193"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Can i chnage my account ?",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100014\nEmail: ad****@ho***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T01:01:58.315418"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "No it is not my account",
+      "assistant_response": "No problem. What would you like to update? Please provide the correct account number.",
+      "intent": "Billing",
+      "timestamp": "2026-01-19T01:02:09.826205"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "337373",
+      "assistant_response": "I couldn't find an account associated with the number you provided. Please check and confirm:\n\n• Is the account number correct? (It should be 6 digits starting with '10')\n• If you don't have an account yet, visit our office at Ring Road, Benin City (Monday-Friday, 8AM-4PM) to create one. Bring valid ID and proof of address.\n\nYou can also provide a different account number if there was a typo.",
+      "intent": "AccountNotFound",
+      "timestamp": "2026-01-19T01:02:18.467128"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "100015",
+      "assistant_response": "Let me check your account. Is this correct?\n\nAccount: 100015\nEmail: da****@gm***.com\n\nReply 'Yes' to proceed or 'No' to update.",
+      "intent": "BillingConfirmation",
+      "timestamp": "2026-01-19T01:02:37.934616"
+    },
+    {
+      "session_id": "2348055614455",
+      "user_message": "Confirmed",
+      "assistant_response": "I sincerely apologize for this error. Your bill of ₦21,000 exceeds the ₦17,000 NERC cap by ₦4,000. We'll adjust it within one billing cycle. Get a prepaid meter for more accurate billing at https://imaap.bedinelectric.com:55682/",
+      "intent": "Billing",
+      "timestamp": "2026-01-19T01:02:55.988442"
+    }
+  ]
+}

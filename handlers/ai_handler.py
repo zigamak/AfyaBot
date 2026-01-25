@@ -75,7 +75,13 @@ I can help with:
         return self.whatsapp_service.create_text_message(session_id, greeting_message)
 
     def _process_user_message(self, state: Dict, session_id: str, user_message: str) -> Dict:
-        """Process user message using LLM-powered AI service with smart confirmation detection."""
+        """
+        Process user message using LLM-powered AI service with:
+        - Account validation
+        - Billing confirmation modal
+        - Fault confirmation
+        - Email masking
+        """
         phone_number = state.get("phone_number", session_id)
         user_name = state.get("user_name", "Customer")
         
@@ -85,26 +91,35 @@ I can help with:
             # Get conversation history
             conversation_history = state.get("conversation_history", [])
             
-            # CRITICAL: Check if we're in a confirmation state
-            pending_confirmation = state.get("pending_fault_confirmation", False)
+            # Check confirmation states
+            pending_billing_confirmation = state.get("pending_billing_confirmation", False)
+            pending_fault_confirmation = state.get("pending_fault_confirmation", False)
             
-            # Get current session state for context (must include pending_fault_confirmation)
+            # Get current session state for context
             session_state = {
+                "billing_data": state.get("billing_data", {}),
                 "fault_data": state.get("fault_data", {}),
                 "account_number": state.get("account_number"),
                 "billing_checked": state.get("billing_checked", False),
-                "pending_fault_confirmation": pending_confirmation,  # Pass this to AI service
+                "pending_billing_confirmation": pending_billing_confirmation,
+                "pending_fault_confirmation": pending_fault_confirmation,
                 "phone_number": phone_number
             }
             
-            # Log confirmation state for debugging
-            if pending_confirmation:
-                logger.info(f"🔔 CONFIRMATION MODE: Waiting for user response to confirm fault details")
+            logger.info(f"Session state being passed to AI service: {session_state}")
+            
+            # Log confirmation states for debugging
+            if pending_billing_confirmation:
+                logger.info(f"[INFO] BILLING CONFIRMATION MODE: Waiting for user to confirm account details")
+                logger.info(f"Billing data: {session_state.get('billing_data', {})}")
+            
+            if pending_fault_confirmation:
+                logger.info(f"[INFO] FAULT CONFIRMATION MODE: Waiting for user to confirm fault details")
                 logger.info(f"Fault data: {session_state.get('fault_data', {})}")
             
             logger.info(f"Calling AI service with LLM for: {user_message[:100]}")
             
-            # Generate AI response using LLM (AI service will handle smart confirmation detection)
+            # Generate AI response (handles all confirmation logic and email masking)
             ai_response, intent, state_update = self.ai_service.generate_response(
                 user_message, 
                 conversation_history,
@@ -119,6 +134,12 @@ I can help with:
             for key, value in state_update.items():
                 state[key] = value
                 logger.info(f"State updated: {key} = {str(value)[:100]}")
+            
+            # CRITICAL: Save updated state BEFORE adding to conversation history
+            self.session_manager.update_session_state(session_id, state)
+            
+            # Log the actual state to verify
+            logger.info(f"Verified state after update: pending_billing={state.get('pending_billing_confirmation', False)}, pending_fault={state.get('pending_fault_confirmation', False)}")
             
             # Update conversation history
             conversation_entry = {
@@ -135,7 +156,7 @@ I can help with:
             
             state["conversation_history"] = conversation_history
             
-            # Save to data manager
+            # Save to data manager (with full email, not masked - masking is only for display)
             self.data_manager.save_conversation(
                 phone_number,
                 session_id,
@@ -147,7 +168,7 @@ I can help with:
             # Save updated state
             self.session_manager.update_session_state(session_id, state)
             
-            logger.info(f"✅ Response sent. Current state: pending_confirmation={state.get('pending_fault_confirmation', False)}")
+            logger.info(f"[SUCCESS] Response sent. States: billing_confirmation={state.get('pending_billing_confirmation', False)}, fault_confirmation={state.get('pending_fault_confirmation', False)}")
             
             return self.whatsapp_service.create_text_message(session_id, ai_response)
         

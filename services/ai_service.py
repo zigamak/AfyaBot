@@ -7,9 +7,9 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-# Try to import OpenAI
+# Try to import Azure OpenAI
 try:
-    from openai import OpenAI
+    from openai import AzureOpenAI
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
@@ -18,36 +18,67 @@ except ImportError:
 class AIService:
     """
     Enhanced AI-powered conversational service for BEDC WhatsApp Support Bot
-    using LLM for intent detection and response generation.
+    
+    Features:
+    - Account validation
+    - Email masking for privacy
+    - Billing confirmation modal before showing data
+    - Fault confirmation before logging
+    - Smart confirmation detection
     """
 
     def __init__(self, config, data_manager):
-        """Initialize AI Service with LLM capabilities."""
+        """Initialize AI Service with Azure OpenAI capabilities."""
         self.data_manager = data_manager
         
-        # Get OpenAI API key
+        # Get Azure OpenAI configuration
         try:
             if isinstance(config, dict):
-                self.openai_api_key = config.get("openai_api_key")
+                self.azure_api_key = config.get("AZURE_API_KEY")
+                self.azure_endpoint = config.get("AZURE_ENDPOINT")
+                self.azure_api_version = config.get("AZURE_API_VERSION", "2024-02-15-preview")
+                self.azure_deployment = config.get("AZURE_DEPLOYMENT_NAME")
             else:
-                self.openai_api_key = getattr(config, 'OPENAI_API_KEY', os.getenv("OPENAI_API_KEY"))
-        except:
-            self.openai_api_key = None
+                # Config is an object, so use getattr
+                self.azure_api_key = getattr(config, 'AZURE_API_KEY', None)
+                self.azure_endpoint = getattr(config, 'AZURE_ENDPOINT', None)
+                self.azure_api_version = getattr(config, 'AZURE_API_VERSION', "2024-02-15-preview")
+                self.azure_deployment = getattr(config, 'AZURE_DEPLOYMENT_NAME', None)
+        except Exception as e:
+            logger.error(f"Error loading Azure OpenAI config: {e}")
+            self.azure_api_key = None
+            self.azure_endpoint = None
+            self.azure_api_version = None
+            self.azure_deployment = None
         
-        # Initialize OpenAI client if available
+        # Initialize Azure OpenAI client if available
         self.client = None
         self.ai_enabled = False
         
-        if OPENAI_AVAILABLE and self.openai_api_key:
+        if OPENAI_AVAILABLE and self.azure_api_key and self.azure_endpoint and self.azure_deployment:
             try:
-                self.client = OpenAI(api_key=self.openai_api_key)
+                self.client = AzureOpenAI(
+                    api_key=self.azure_api_key,
+                    api_version=self.azure_api_version,
+                    azure_endpoint=self.azure_endpoint
+                )
                 self.ai_enabled = True
-                logger.info("AI Service initialized with LLM support")
+                logger.info(f"AI Service initialized with Azure OpenAI support (Deployment: {self.azure_deployment})")
             except Exception as e:
-                logger.error(f"Failed to initialize OpenAI client: {e}")
+                logger.error(f"Failed to initialize Azure OpenAI client: {e}")
                 self.ai_enabled = False
         else:
-            logger.warning("AI Service running in fallback mode (pattern matching only)")
+            missing = []
+            if not OPENAI_AVAILABLE:
+                missing.append("OpenAI library")
+            if not self.azure_api_key:
+                missing.append("AZURE_API_KEY")
+            if not self.azure_endpoint:
+                missing.append("AZURE_ENDPOINT")
+            if not self.azure_deployment:
+                missing.append("AZURE_DEPLOYMENT_NAME")
+            
+            logger.warning(f"AI Service running in fallback mode. Missing: {', '.join(missing)}")
             self.ai_enabled = False
         
         # Load FAQ knowledge base
@@ -90,36 +121,6 @@ IMPORTANT TERMINOLOGY:
 
 10. **What are BEDC's office hours?**
     Monday-Friday, 8:00 AM - 4:00 PM at Ring Road, Benin City.
-
-11. **How much does a prepaid meter cost?**
-    Meter costs vary by type (single-phase vs three-phase). Visit https://imaap.beninelectric.com:55682/ for current pricing.
-
-12. **Can I pay my bill through WhatsApp?**
-    Currently, bill payments are not available via WhatsApp. Please visit our office or use bank channels.
-
-13. **What is my feeder?**
-    Your feeder is shown on your bill. It determines your NERC cap amount. Contact us with your account number to confirm.
-
-14. **How is the NERC cap calculated?**
-    NERC caps are based on feeder classification and customer category. Unmetered customers are charged estimated consumption within these caps.
-
-15. **Can I switch from postpaid to prepaid?**
-    Yes! Enroll in MAP to get a prepaid meter. Your postpaid account will be closed once the meter is installed.
-
-16. **What if I disagree with my bill?**
-    Provide your account number. We'll review it against NERC caps and adjust if there's an error.
-
-17. **How do I check my current bill?**
-    Provide your account number and we'll check your billing status immediately.
-
-18. **What areas does BEDC serve?**
-    BEDC serves Edo, Delta, Ondo, and Ekpoma areas with multiple feeders across these regions.
-
-19. **Can I get a meter if I have unpaid bills?**
-    Outstanding bills should be cleared before MAP enrollment. Contact our office for payment arrangements.
-
-20. **How do I update my contact information?**
-    Visit our office with valid ID to update your phone number, email, or address on your account.
 """
 
     def _get_system_prompt(self) -> str:
@@ -131,19 +132,20 @@ CRITICAL RULES:
 2. CHECK CONTEXT - If user already provided information, DON'T ask again
 3. ONE QUESTION AT A TIME - If you need info, ask for ONE thing only
 4. NO REPETITION - Don't repeat what you already said
-5. FAULT CONFIRMATION - Before logging a fault, ALWAYS confirm customer details
+5. CONFIRMATION BEFORE DATA - Before showing billing/account data, ALWAYS confirm account details first
+6. VALIDATE ACCOUNT - If account doesn't exist, inform user clearly and helpfully
 
 TONE GUIDELINES:
 - **Apologize & Empathize** when: Billing errors, power outages, service failures
 - **Be Direct & Helpful** when: Providing information, answering questions, giving instructions
 - **Be Warm** for: Greetings, confirmations, simple requests
 - **Be Polite** when asking: Use "Could you share..." not "What's your..."
-- **Be Detailed** when explaining: Billing status, why something is correct/incorrect
+- **Be Detailed** when explaining: Billing status, why something is correct/incorrect, next steps
 - **Be Concise** for: Simple how-to questions, straightforward requests
 
 RESPONSE FORMAT (JSON only):
 {{
-  "intent": "<Greeting | Billing | Metering | Fault | FaultConfirmation | FAQ>",
+  "intent": "<Greeting | Billing | BillingConfirmation | Metering | Fault | FaultConfirmation | FAQ | AccountNotFound>",
   "reply": "<Natural, conversational response>",
   "required_data": ["<what's still missing>"]
 }}
@@ -152,88 +154,95 @@ INTENT HANDLING:
 
 **Greeting**: 
 - Warm and natural: "Hi! I'm here to help with your BEDC account. What can I assist you with today?"
+- If they greet AND ask about account → Ask for account number politely
+
+**AccountNotFound**:
+- ONLY show when user provides an account number that doesn't exist
+- "I couldn't find an account associated with the number you provided. Please check and confirm:\n\n• Is the account number correct? (It should be 6 digits starting with '10')\n• If you don't have an account yet, visit our office at Ring Road, Benin City (Monday-Friday, 8AM-4PM) to create one. Bring valid ID and proof of address.\n\nYou can also provide a different account number if there was a typo."
 
 **Billing**: 
-- If no account → "Could you share your account number so I can look into your billing?"
-- If bill ABOVE CAP → "I sincerely apologize for this error. Your bill of ₦X,XXX exceeds the ₦Y,YYY NERC cap by ₦Z,ZZZ. We'll adjust it within one billing cycle."
-- If bill WITHIN CAP (unmetered) → "Your bill of ₦X,XXX is within the ₦Y,YYY NERC cap for [Feeder Name] feeder. Since you're an unmetered customer (no prepaid meter), your billing follows the approved methodology. For more accurate billing, you can apply for a prepaid meter at https://imaap.beninelectric.com:55682/"
-- If bill ABOVE CAP (unmetered) → "I sincerely apologize for this error. Your bill of ₦X,XXX exceeds the ₦Y,YYY NERC cap by ₦Z,ZZZ. We'll adjust it within one billing cycle. Since you're unmetered, you can get a prepaid meter for more accurate billing at https://imaap.beninelectric.com:55682/"
+- If account not found → STOP and return AccountNotFound intent instead
+- If no account provided yet → "Could you share your account number so I can look into your billing?"
+- If account provided and exists AND billing data available AND user has NOT been asked to confirm yet → Use "BillingConfirmation" intent to confirm details first (DON'T show billing data yet)
+- IMPORTANT: If you see "PENDING BILLING CONFIRMATION" in session data, it means confirmation was ALREADY shown. DO NOT use BillingConfirmation intent again.
+
+**BillingConfirmation**:
+- Before showing billing data, confirm account details with masked email
+- "Let me check your account. Is this correct?\n\nAccount: 123456\nEmail: ma****@gm***.com\n\nReply 'Yes' to proceed or 'No' to update."
+- NOTE: Email should be masked for privacy
+- After "Yes" confirmation → NOW show the billing data with full details
+- After "No" → Ask what needs updating
 
 **Fault**:
-- ALWAYS apologize for power outages
+- If account not found → STOP and return AccountNotFound intent instead
+- ALWAYS apologize for power outages first
 - "I'm sorry about the outage. Let me help you log a fault report. Could you share your account number?" (if needed)
-- Once you have account + email → Use "FaultConfirmation" intent to confirm before logging
+- Once you have VALID account + email → Use "FaultConfirmation" intent to confirm before logging
 
 **FaultConfirmation**:
-- Before logging, confirm: "Just to confirm - is this your account?\n\nAccount: 123456\nEmail: user@email.com\n\nReply 'Yes' to confirm or 'No' to update."
+- Before logging fault, confirm all details: "Just to confirm - is this your account?\n\nAccount: 123456\nEmail: ma****@gm***.com\n\nReply 'Yes' to confirm or 'No' to update."
+- NOTE: Email should be masked for privacy
 - After "Yes" confirmation → Log the fault with success message
 - After "No" → Ask what needs updating
 
 **Metering**:
-- Be helpful and direct: "You can apply for a prepaid meter at https://imaap.beninelectric.com:55682/"
-- If they ask what unmetered means → "Being unmetered means you don't have a prepaid meter yet. You receive estimated monthly bills based on NERC caps. Getting a prepaid meter lets you pay for only what you use."
-- If they need steps → Give 2-3 simple steps
-- If new customer → "You'll need to visit our office at Ring Road, Benin City to create an account first."
+- Be helpful and direct: "You can apply for a prepaid meter at https://imaap.bedinelectric.com:55682/ - you'll need your account number."
 
 **FAQ**: 
 - Answer directly from knowledge base in 1-3 sentences
-- Be helpful, not overly formal
 
 FAQ KNOWLEDGE:
 {self.faq_knowledge}
 
-EXAMPLES:
+BALANCE: Be human, caring, and natural. Protect user privacy. Always confirm before showing sensitive data. Avoid sounding like a bot."""
 
-✅ GOOD - Greeting (Natural):
-"Hi! I'm here to help with your BEDC account. What can I assist you with today?"
-
-✅ GOOD - Billing Within Cap (Detailed with clarification):
-"Your bill of ₦14,500 is within the ₦15,000 NERC cap for Uselu feeder. Since you're an unmetered customer (no prepaid meter), your billing follows the approved methodology. For more accurate billing, consider applying for a prepaid meter at https://imaap.beninelectric.com:55682/"
-
-✅ GOOD - Fault Confirmation:
-"Just to confirm - is this your account?
-
-Account: 102345
-Email: john@email.com
-
-Reply 'Yes' to confirm or 'No' to update."
-
-✅ GOOD - After Confirmation:
-"Fault report logged successfully!
-
-Reference: FR-102345-20260117
-Email: john@email.com
-
-Our technical team will contact you within 24-48 hours. Thanks for your patience."
-
-❌ BAD - Robotic greeting:
-"Hello! I'm BEDC Support Bot. How can I help you?"
-
-❌ BAD - Skipping confirmation:
-*Logs fault immediately without asking for confirmation*
-
-BALANCE: Be human, caring, and natural. Avoid sounding like a bot."""
+    def mask_email(self, email: str) -> str:
+        """Mask email address for privacy protection."""
+        if not email or '@' not in email:
+            return email
+        
+        try:
+            local, domain_parts = email.split('@', 1)
+            
+            if '.' in domain_parts:
+                domain, tld = domain_parts.rsplit('.', 1)
+            else:
+                domain = domain_parts
+                tld = ''
+            
+            if len(local) <= 4:
+                masked_local = local
+            else:
+                masked_local = local[:2] + '****' + local[-2:]
+            
+            if len(domain) <= 4:
+                masked_domain = domain
+            else:
+                masked_domain = domain[:2] + '***' + domain[-2:]
+            
+            if tld:
+                masked_email = f"{masked_local}@{masked_domain}.{tld}"
+            else:
+                masked_email = f"{masked_local}@{masked_domain}"
+            
+            return masked_email
+            
+        except Exception as e:
+            logger.error(f"Error masking email {email}: {e}")
+            return email
 
     def call_llm(self, user_message: str, conversation_state: Dict = None,
                  customer_data: Dict = None, billing_result: Dict = None,
                  conversation_history: List[Dict] = None) -> Dict:
-        """
-        Call the LLM to process user message and return structured response.
-        
-        Returns:
-            Dict with keys: intent, reply, required_data
-        """
+        """Call the Azure OpenAI LLM to process user message and return structured response."""
         if not self.ai_enabled or not self.client:
-            # Fallback to pattern matching
             return self._fallback_response(user_message, customer_data, billing_result)
         
         try:
-            # Prepare context
             context_parts = []
             
-            # Add conversation history for context
             if conversation_history and len(conversation_history) > 0:
-                recent_history = conversation_history[-5:]  # Last 5 exchanges
+                recent_history = conversation_history[-5:]
                 history_text = "PREVIOUS CONVERSATION:\n"
                 for exchange in recent_history:
                     history_text += f"User: {exchange.get('user', '')}\n"
@@ -246,12 +255,10 @@ BALANCE: Be human, caring, and natural. Avoid sounding like a bot."""
                     state_info += f"- Account: {conversation_state['saved_account_number']}\n"
                 if conversation_state.get("email_from_database"):
                     state_info += f"- Email: ALREADY IN DATABASE (don't ask for it)\n"
-                elif conversation_state.get("has_email"):
-                    state_info += f"- Email: Already provided\n"
-                if conversation_state.get("phone_number"):
-                    state_info += f"- Phone: {conversation_state['phone_number']}\n"
+                if conversation_state.get("pending_billing_confirmation"):
+                    state_info += f"- PENDING BILLING CONFIRMATION: Waiting for user to confirm before showing billing data\n"
                 if conversation_state.get("pending_fault_confirmation"):
-                    state_info += f"- PENDING FAULT CONFIRMATION: Waiting for user to confirm details\n"
+                    state_info += f"- PENDING FAULT CONFIRMATION: Waiting for user to confirm before logging fault\n"
                 context_parts.append(state_info)
             
             if customer_data:
@@ -262,16 +269,14 @@ BALANCE: Be human, caring, and natural. Avoid sounding like a bot."""
             
             context = "\n".join(context_parts) if context_parts else "No additional context."
             
-            # Construct user prompt
             user_prompt = f"""Customer message: "{user_message}"
 
 {context}
 
-Remember: Be NATURAL (not robotic). Check context before asking for info. For faults, ALWAYS confirm details before logging. Return JSON only."""
+Remember: Be NATURAL. Validate account exists. For billing, CONFIRM account details first. MASK EMAIL in confirmations. Return JSON only."""
             
-            # Call OpenAI API
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=self.azure_deployment,
                 messages=[
                     {"role": "system", "content": self._get_system_prompt()},
                     {"role": "user", "content": user_prompt}
@@ -280,10 +285,8 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
                 response_format={"type": "json_object"}
             )
             
-            # Parse response
             result = json.loads(response.choices[0].message.content)
             
-            # Validate required fields
             if "intent" not in result or "reply" not in result:
                 raise ValueError("LLM response missing required fields")
             
@@ -294,7 +297,7 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
             return result
             
         except Exception as e:
-            logger.error(f"Error calling LLM: {e}", exc_info=True)
+            logger.error(f"Error calling Azure OpenAI LLM: {e}", exc_info=True)
             return self._fallback_response(user_message, customer_data, billing_result)
 
     def _fallback_response(self, user_message: str, customer_data: Dict = None,
@@ -302,7 +305,6 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
         """Fallback pattern-matching based response when LLM is unavailable."""
         message_lower = user_message.lower().strip()
         
-        # Greeting - warm and natural
         if any(word in message_lower for word in ['hello', 'hi', 'hey', 'good morning', 'good afternoon']):
             return {
                 "intent": "Greeting",
@@ -310,25 +312,13 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
                 "required_data": []
             }
         
-        # Billing - empathetic for errors, detailed for information
         if any(word in message_lower for word in ['bill', 'billing', 'charge', 'overcharge', 'nerc', 'cap']):
-            if billing_result:
-                customer = billing_result.get('customer_data', {})
-                feeder = customer.get('feeder', 'your')
-                is_metered = customer.get('metered', False)
-                
-                if billing_result['status'] == 'within_cap':
-                    reply = f"Your bill of ₦{billing_result['bill_amount']:,} is within the ₦{billing_result['nerc_cap']:,} NERC cap for {feeder} feeder. "
-                    if not is_metered:
-                        reply += "Since you're an unmetered customer (no prepaid meter), your billing follows the approved methodology. "
-                        reply += "For more accurate billing, consider applying for a prepaid meter at https://imaap.beninelectric.com:55682/"
-                else:
-                    # Apologize for billing errors with details
-                    reply = f"I sincerely apologize for this error. Your bill of ₦{billing_result['bill_amount']:,} exceeds the ₦{billing_result['nerc_cap']:,} NERC cap by ₦{billing_result['difference']:,}. "
-                    reply += "We'll adjust it within one billing cycle."
-                    if not is_metered:
-                        reply += " Since you're unmetered, you can get a prepaid meter for more accurate billing at https://imaap.beninelectric.com:55682/"
-                return {"intent": "Billing", "reply": reply, "required_data": []}
+            if billing_result and customer_data:
+                return {
+                    "intent": "BillingConfirmation",
+                    "reply": "Requesting confirmation before showing billing data",
+                    "required_data": []
+                }
             else:
                 return {
                     "intent": "Billing",
@@ -336,23 +326,20 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
                     "required_data": ["account_number"]
                 }
         
-        # Metering - direct and helpful
-        if any(word in message_lower for word in ['meter', 'prepaid', 'map', 'apply', 'unmetered']):
+        if any(word in message_lower for word in ['meter', 'prepaid', 'map', 'apply']):
             return {
                 "intent": "Metering",
                 "reply": "You can apply for a prepaid meter at https://imaap.beninelectric.com:55682/",
                 "required_data": []
             }
         
-        # Fault - always apologize for service issues
-        if any(word in message_lower for word in ['fault', 'outage', 'no power', 'blackout', 'no light']):
+        if any(word in message_lower for word in ['fault', 'outage', 'no power', 'blackout']):
             return {
                 "intent": "Fault",
-                "reply": "I'm sorry about the outage. Let me help you log a fault report. Could you share your account number?",
+                "reply": "I'm sorry about the outage. Could you share your account number?",
                 "required_data": ["account_number", "email"]
             }
         
-        # Default - helpful
         return {
             "intent": "FAQ",
             "reply": "I can help with billing, meters, or fault reports. What do you need assistance with?",
@@ -360,96 +347,86 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
         }
 
     def _is_affirmative(self, message: str) -> bool:
-        """
-        Check if message is an affirmative response.
-        Handles various ways users might confirm.
-        """
+        """Use LLM to detect if message is an affirmative response."""
         if not message:
             return False
         
-        message_lower = message.lower().strip()
+        # If LLM is not available, use simple keyword matching
+        if not self.ai_enabled or not self.client:
+            message_lower = message.lower().strip()
+            simple_affirmatives = ['yes', 'y', 'yeah', 'yep', 'ok', 'correct', 'right']
+            return any(word in message_lower for word in simple_affirmatives)
         
-        # Direct affirmatives
-        affirmative_keywords = [
-            'yes', 'y', 'yeah', 'yep', 'yup', 'sure', 'confirm', 'correct', 
-            'right', 'ok', 'okay', 'fine', 'good', 'proceed', 'go ahead',
-            'that\'s right', 'that is right', 'yes it is', 'yes that\'s correct',
-            'yes that is correct', 'confirmed', 'absolutely', 'definitely',
-            'affirmative', 'indeed', 'exactly', 'perfect', 'accurate',
-            'true', 'correct information', 'all correct', 'looks good',
-            'looks right', 'everything is correct', 'everything correct'
-        ]
-        
-        # Check for exact matches or partial matches
-        for keyword in affirmative_keywords:
-            if keyword in message_lower:
-                return True
-        
-        # Check for affirmative phrases with variations
-        affirmative_patterns = [
-            r'\byes\b',
-            r'\byeah\b',
-            r'\byup\b',
-            r'\bcorrect\b',
-            r'\bright\b',
-            r'\bok\b',
-            r'\bconfirm\b',
-            r'\bproceed\b',
-            r'that.{0,5}(is|\'s).{0,5}(right|correct)',
-            r'(all|everything).{0,5}(is|looks|seems).{0,5}(correct|right|good|fine)',
-            r'go.{0,5}ahead'
-        ]
-        
-        for pattern in affirmative_patterns:
-            if re.search(pattern, message_lower):
-                return True
-        
-        return False
+        try:
+            prompt = f"""Is the following message an affirmative/positive response (like "yes", "correct", "that's right", "it is my account", etc.)?
+
+Message: "{message}"
+
+Respond with ONLY "YES" or "NO"."""
+            
+            response = self.client.chat.completions.create(
+                model=self.azure_deployment,
+                messages=[
+                    {"role": "system", "content": "You are a classification assistant. Respond with only YES or NO."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0,
+                max_tokens=10
+            )
+            
+            result = response.choices[0].message.content.strip().upper()
+            is_affirmative = result == "YES"
+            
+            logger.info(f"LLM affirmative detection for '{message}': {is_affirmative}")
+            return is_affirmative
+            
+        except Exception as e:
+            logger.error(f"Error in LLM affirmative detection: {e}")
+            # Fallback to simple keyword matching
+            message_lower = message.lower().strip()
+            simple_affirmatives = ['yes', 'y', 'yeah', 'yep', 'ok', 'correct', 'right']
+            return any(word in message_lower for word in simple_affirmatives)
 
     def _is_negative(self, message: str) -> bool:
-        """
-        Check if message is a negative response.
-        Handles various ways users might reject or request changes.
-        """
+        """Use LLM to detect if message is a negative response."""
         if not message:
             return False
         
-        message_lower = message.lower().strip()
+        # If LLM is not available, use simple keyword matching
+        if not self.ai_enabled or not self.client:
+            message_lower = message.lower().strip()
+            simple_negatives = ['no', 'n', 'nope', 'wrong', 'incorrect', 'not']
+            return any(word in message_lower for word in simple_negatives)
         
-        # Direct negatives
-        negative_keywords = [
-            'no', 'n', 'nope', 'nah', 'wrong', 'incorrect', 'not right',
-            'not correct', 'update', 'change', 'fix', 'modify', 'edit',
-            'that\'s wrong', 'that is wrong', 'no it\'s not', 'no it is not',
-            'not mine', 'not my', 'different', 'another', 'other',
-            'mistake', 'error', 'inaccurate', 'false', 'not accurate',
-            'needs update', 'need to change', 'need to update', 'not this',
-            'that\'s not right', 'that is not right'
-        ]
-        
-        # Check for exact matches or partial matches
-        for keyword in negative_keywords:
-            if keyword in message_lower:
-                return True
-        
-        # Check for negative phrases with variations
-        negative_patterns = [
-            r'\bno\b',
-            r'\bnope\b',
-            r'\bnah\b',
-            r'\bwrong\b',
-            r'\bincorrect\b',
-            r'not.{0,5}(right|correct|mine|my|accurate)',
-            r'(that|this|it).{0,5}(is|\'s).{0,5}(wrong|incorrect|not right)',
-            r'need.{0,5}(to|).{0,5}(change|update|fix|modify)',
-            r'(change|update|fix|modify).{0,5}(it|this|that)'
-        ]
-        
-        for pattern in negative_patterns:
-            if re.search(pattern, message_lower):
-                return True
-        
-        return False
+        try:
+            prompt = f"""Is the following message a negative/rejection response (like "no", "wrong", "not correct", "that's not my account", etc.)?
+
+Message: "{message}"
+
+Respond with ONLY "YES" or "NO"."""
+            
+            response = self.client.chat.completions.create(
+                model=self.azure_deployment,
+                messages=[
+                    {"role": "system", "content": "You are a classification assistant. Respond with only YES or NO."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0,
+                max_tokens=10
+            )
+            
+            result = response.choices[0].message.content.strip().upper()
+            is_negative = result == "YES"
+            
+            logger.info(f"LLM negative detection for '{message}': {is_negative}")
+            return is_negative
+            
+        except Exception as e:
+            logger.error(f"Error in LLM negative detection: {e}")
+            # Fallback to simple keyword matching
+            message_lower = message.lower().strip()
+            simple_negatives = ['no', 'n', 'nope', 'wrong', 'incorrect', 'not']
+            return any(word in message_lower for word in simple_negatives)
 
     def extract_account_number(self, message: str) -> Optional[str]:
         """Extract account number from message."""
@@ -469,7 +446,7 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
                          phone_number: str = None, user_name: str = None,
                          session_state: Dict = None) -> Tuple[str, str, Dict]:
         """
-        Generate AI response using LLM with proper flow handling.
+        Generate AI response with account validation and billing confirmation modal.
 
         Returns:
             Tuple[str, str, Dict]: (response, intent, updated_state)
@@ -480,14 +457,82 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
         if session_state is None:
             session_state = {}
         
-        # Check if we're waiting for fault confirmation
-        pending_confirmation = session_state.get("pending_fault_confirmation", False)
+        pending_billing_confirmation = session_state.get("pending_billing_confirmation", False)
+        pending_fault_confirmation = session_state.get("pending_fault_confirmation", False)
         
-        # Handle confirmation responses with smart detection
-        if pending_confirmation:
-            # Use smart affirmative/negative detection
+        # CRITICAL FIX: Check if the last message was a confirmation request
+        if conversation_history and len(conversation_history) > 0:
+            last_exchange = conversation_history[-1]
+            last_intent = last_exchange.get("intent", "")
+            
+            # If last intent was BillingConfirmation and user is responding, we're in confirmation mode
+            if last_intent == "BillingConfirmation":
+                pending_billing_confirmation = True
+                logger.info("Detected BillingConfirmation from last exchange - setting pending_billing_confirmation=True")
+            
+            # Same for fault confirmation
+            if last_intent == "FaultConfirmation":
+                pending_fault_confirmation = True
+                logger.info("Detected FaultConfirmation from last exchange - setting pending_fault_confirmation=True")
+        
+        # Log state for debugging
+        logger.info(f"Current state flags: pending_billing={pending_billing_confirmation}, pending_fault={pending_fault_confirmation}")
+        
+        # Handle billing confirmation FIRST (before calling LLM)
+        if pending_billing_confirmation:
+            logger.info(f"[INFO] BILLING CONFIRMATION MODE: Processing user response")
             if self._is_affirmative(user_message):
-                # Proceed with logging the fault
+                logger.info(f"Affirmative detected! Proceeding to show billing data")
+                # Get fresh billing data
+                account_num = session_state.get("account_number")
+                logger.info(f"Account number from session_state: {account_num}")
+                
+                if account_num:
+                    logger.info(f"Account number exists, fetching data...")
+                    # Fetch customer data and billing result
+                    customer_data = self.data_manager.get_customer_by_account(account_num)
+                    logger.info(f"Customer data retrieved: {customer_data is not None}")
+                    if customer_data:
+                        billing_result = self.data_manager.check_billing_status(account_num)
+                        logger.info(f"Billing result retrieved: {billing_result is not None}")
+                        
+                        if billing_result:
+                            customer = billing_result.get('customer_data', {})
+                            feeder = customer.get('feeder', 'your')
+                            is_metered = customer.get('metered', False)
+                            
+                            if billing_result['status'] == 'within_cap':
+                                reply = f"Your bill of ₦{billing_result['bill_amount']:,} is within the ₦{billing_result['nerc_cap']:,} NERC cap for {feeder} feeder. "
+                                if not is_metered:
+                                    reply += "Since you're an unmetered customer, your billing follows the approved methodology. "
+                                    reply += "For more accurate billing, apply for a prepaid meter at https://imaap.bedinelectric.com:55682/"
+                            else:
+                                reply = f"I sincerely apologize for this error. Your bill of ₦{billing_result['bill_amount']:,} exceeds the ₦{billing_result['nerc_cap']:,} NERC cap by ₦{billing_result['difference']:,}. "
+                                reply += "We'll adjust it within one billing cycle."
+                                if not is_metered:
+                                    reply += " Get a prepaid meter for more accurate billing at https://imaap.bedinelectric.com:55682/"
+                            
+                            logger.info(f"Showing billing data for account {account_num}")
+                            return (reply, "Billing", {
+                                "billing_data": {},
+                                "pending_billing_confirmation": False,
+                                "billing_checked": True,
+                                "account_number": account_num
+                            })
+            
+            elif self._is_negative(user_message):
+                return ("No problem. What would you like to update? Please provide the correct account number.", "Billing", {
+                    "pending_billing_confirmation": False,
+                    "billing_data": {},
+                    "account_number": None
+                })
+            
+            else:
+                return ("I didn't quite catch that. Please reply 'Yes' to proceed or 'No' to update.", "BillingConfirmation", session_state)
+        
+        # Handle fault confirmation
+        if pending_fault_confirmation:
+            if self._is_affirmative(user_message):
                 fault_data = session_state.get("fault_data", {})
                 
                 success = self.data_manager.save_fault_report(
@@ -498,62 +543,82 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
                 )
                 
                 if success:
+                    masked_email = self.mask_email(fault_data['email'])
+                    
                     reply = "Fault report logged successfully!\n\n"
                     reply += f"Reference: FR-{fault_data['account_number']}-{datetime.now().strftime('%Y%m%d')}\n"
-                    reply += f"Email: {fault_data['email']}\n\n"
+                    reply += f"Email: {masked_email}\n\n"
                     reply += "Our technical team will contact you within 24-48 hours. Thanks for your patience."
                     
                     return (reply, "Fault", {
                         "fault_data": {},
                         "pending_fault_confirmation": False
                     })
-                else:
-                    return ("I apologize, but there was an error logging your fault report. Please try again.", "Fault", {
-                        "pending_fault_confirmation": False
-                    })
             
             elif self._is_negative(user_message):
-                reply = "No problem. What would you like to update? Please provide the correct account number or email."
-                return (reply, "Fault", {
+                return ("No problem. What would you like to update?", "Fault", {
                     "pending_fault_confirmation": False,
                     "fault_data": {}
                 })
             
             else:
-                # If unclear, ask for clarification
-                reply = "I didn't quite catch that. Please reply 'Yes' to confirm the details are correct, or 'No' if you need to update them."
-                return (reply, "FaultConfirmation", session_state)
+                return ("Please reply 'Yes' to confirm or 'No' to update.", "FaultConfirmation", session_state)
         
-        # Check if account number already exists in session
+        # Extract and validate account
         saved_account_number = session_state.get("account_number")
-        
-        # Extract account number and email if present in current message
         account_number = self.extract_account_number(user_message)
         email = self.extract_email(user_message)
         
-        # Use saved account number if no new one found
+        # Check if user typed something that looks like an account but isn't valid (e.g., "12333")
+        potential_account = re.search(r'\b(\d{5,6})\b', user_message)
+        if potential_account and not account_number:
+            # User typed numbers that look like account but don't match 10XXXX pattern
+            invalid_num = potential_account.group(1)
+            logger.warning(f"Invalid account number format detected: {invalid_num}")
+            error_reply = f"I couldn't find an account associated with the number you provided. Please check and confirm:\n\n"
+            error_reply += f"• Is the account number correct? (It should be 6 digits starting with '10')\n"
+            error_reply += f"• If you don't have an account yet, visit our office at Ring Road, Benin City (Monday-Friday, 8AM-4PM) to create one. Bring valid ID and proof of address.\n\n"
+            error_reply += f"You can also provide a different account number if there was a typo."
+            
+            return (error_reply, "AccountNotFound", {})
+        
+        # If account number doesn't match pattern (10XXXX), reject it immediately
+        if account_number and not re.match(r'^10\d{4}$', account_number):
+            logger.warning(f"Invalid account number format: {account_number}")
+            error_reply = f"I couldn't find an account associated with the number you provided. Please check and confirm:\n\n"
+            error_reply += f"• Is the account number correct? (It should be 6 digits starting with '10')\n"
+            error_reply += f"• If you don't have an account yet, visit our office at Ring Road, Benin City (Monday-Friday, 8AM-4PM) to create one. Bring valid ID and proof of address.\n\n"
+            error_reply += f"You can also provide a different account number if there was a typo."
+            
+            return (error_reply, "AccountNotFound", {})
+        
         if not account_number and saved_account_number:
             account_number = saved_account_number
-            logger.info(f"Using saved account number: {account_number}")
         
-        # Get customer data if account number is available
         customer_data = None
         billing_result = None
         customer_email = None
+        account_exists = False
         
         if account_number:
             customer_data = self.data_manager.get_customer_by_account(account_number)
             if customer_data:
+                account_exists = True
                 billing_result = self.data_manager.check_billing_status(account_number)
-                customer_email = customer_data.get("email")  # Get email from database
-                logger.info(f"Found customer email in database: {customer_email}")
+                customer_email = customer_data.get("email")
+                logger.info(f"[SUCCESS] Account {account_number} found")
+            else:
+                logger.warning(f"[ERROR] Account {account_number} NOT FOUND")
+                error_reply = f"I couldn't find an account associated with the number you provided. Please check and confirm:\n\n"
+                error_reply += f"• Is the account number correct? (It should be 6 digits starting with '10')\n"
+                error_reply += f"• If you don't have an account yet, visit our office at Ring Road, Benin City (Monday-Friday, 8AM-4PM) to create one. Bring valid ID and proof of address.\n\n"
+                error_reply += f"You can also provide a different account number if there was a typo."
+                
+                return (error_reply, "AccountNotFound", {})
         
-        # Use database email if user hasn't provided one
         if not email and customer_email:
             email = customer_email
-            logger.info(f"Using email from customer database: {email}")
         
-        # Prepare conversation state for LLM
         conversation_state = {
             "phone_number": phone_number,
             "user_name": user_name,
@@ -562,13 +627,14 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
             "email_from_database": bool(customer_email),
             "session_data": session_state,
             "saved_account_number": saved_account_number,
-            "pending_fault_confirmation": pending_confirmation
+            "pending_billing_confirmation": pending_billing_confirmation,
+            "pending_fault_confirmation": pending_fault_confirmation,
+            "account_exists": account_exists
         }
         
-        if account_number:
+        if account_number and account_exists:
             conversation_state["account_number"] = account_number
         
-        # Call LLM to get response
         llm_response = self.call_llm(
             user_message,
             conversation_state,
@@ -579,35 +645,58 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
         
         intent = llm_response.get("intent", "unknown")
         reply = llm_response.get("reply", "I'm here to help. What can I assist you with?")
-        required_data = llm_response.get("required_data", [])
         
-        # Handle specific flows based on intent
         state_update = {}
         
-        # Save account number to session if found
-        if account_number:
+        if account_number and account_exists:
             state_update["account_number"] = account_number
-            logger.info(f"Saving account number {account_number} to session")
         
-        if intent == "Fault":
-            # Handle fault reporting flow
+        # BILLING CONFIRMATION MODAL
+        if intent == "Billing" and account_number and account_exists and billing_result:
+            masked_email = self.mask_email(customer_email) if customer_email else "Not on file"
+            
+            confirmation_message = f"Let me check your account. Is this correct?\n\n"
+            confirmation_message += f"Account: {account_number}\n"
+            confirmation_message += f"Email: {masked_email}\n\n"
+            confirmation_message += "Reply 'Yes' to proceed or 'No' to update."
+            
+            state_update["billing_data"] = billing_result
+            state_update["pending_billing_confirmation"] = True  # CRITICAL: Set this flag
+            state_update["account_number"] = account_number
+            
+            logger.info(f"[INFO] Setting pending_billing_confirmation=True for account {account_number}")
+            
+            return (confirmation_message, "BillingConfirmation", state_update)
+        
+        # If LLM returned BillingConfirmation but account doesn't exist, override with AccountNotFound
+        elif intent == "BillingConfirmation" and account_number and not account_exists:
+            logger.warning(f"LLM hallucinated BillingConfirmation for non-existent account {account_number}")
+            error_reply = f"I couldn't find an account associated with the number you provided. Please check and confirm:\n\n"
+            error_reply += f"• Is the account number correct? (It should be 6 digits starting with '10')\n"
+            error_reply += f"• If you don't have an account yet, visit our office at Ring Road, Benin City (Monday-Friday, 8AM-4PM) to create one. Bring valid ID and proof of address.\n\n"
+            error_reply += f"You can also provide a different account number if there was a typo."
+            
+            return (error_reply, "AccountNotFound", {})
+        
+        # FAULT CONFIRMATION
+        elif intent == "Fault":
             fault_data = session_state.get("fault_data", {})
             
-            if account_number and account_number not in fault_data:
+            if account_number and account_exists:
                 fault_data["account_number"] = account_number
-            if email and "email" not in fault_data:
+            if email:
                 fault_data["email"] = email
-            if phone_number and "phone_number" not in fault_data:
+            if phone_number:
                 fault_data["phone_number"] = phone_number
             if not fault_data.get("fault_description"):
                 fault_data["fault_description"] = user_message
             
-            # Check if we have all required data
             if fault_data.get("account_number") and fault_data.get("email") and fault_data.get("phone_number"):
-                # Ask for confirmation before logging
+                masked_email = self.mask_email(fault_data['email'])
+                
                 confirmation_message = f"Just to confirm - is this your account?\n\n"
                 confirmation_message += f"Account: {fault_data['account_number']}\n"
-                confirmation_message += f"Email: {fault_data['email']}\n\n"
+                confirmation_message += f"Email: {masked_email}\n\n"
                 confirmation_message += "Reply 'Yes' to confirm or 'No' to update."
                 
                 state_update["fault_data"] = fault_data
@@ -616,13 +705,5 @@ Remember: Be NATURAL (not robotic). Check context before asking for info. For fa
                 return (confirmation_message, "FaultConfirmation", state_update)
             else:
                 state_update["fault_data"] = fault_data
-        
-        elif intent == "Billing" and account_number:
-            # Save billing inquiry
-            state_update["account_number"] = account_number
-            if billing_result:
-                state_update["billing_checked"] = True
-        
-        logger.info(f"Generated response for intent '{intent}': {reply[:100]}")
         
         return (reply, intent, state_update)
